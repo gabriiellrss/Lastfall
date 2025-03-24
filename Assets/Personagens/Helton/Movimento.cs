@@ -16,6 +16,12 @@ public class Player : MonoBehaviour
     private bool isJumping = false;
     private bool canDoubleJump = false; // Adicionado para controle do pulo duplo
 
+    private bool isAttacking = false;
+    private int attackIndex = 1;
+    private float comboTimer = 0f;
+    public float comboResetTime = 1f; // Tempo para resetar o combo
+
+
     public Transform cameraTransform;
 
     void Start()
@@ -32,6 +38,7 @@ public class Player : MonoBehaviour
     void Update()
     {
         Move();
+        HandleAttack();
     }
 
     void Move()
@@ -130,4 +137,50 @@ public class Player : MonoBehaviour
         verticalVelocity = jumpForce; // Aplica a força do pulo duplo
         anim.SetInteger("transition", 3); // Define animação de pulo normal
     }
+
+    void HandleAttack()
+    {
+        if (isAttacking)
+        {
+            comboTimer += Time.deltaTime;
+            if (comboTimer > comboResetTime)
+            {
+                ResetCombo();
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.Space)) // Botão de ataque
+        {
+            if (!isAttacking)
+            {
+                attackIndex = 1;
+                isAttacking = true;
+                comboTimer = 0f;
+                anim.SetInteger("attackIndex", attackIndex);
+                anim.SetTrigger("attack"); // Ativa o primeiro ataque
+            }
+            else if (attackIndex < 3) // Limita o combo a 3 ataques
+            {
+                attackIndex++;
+                comboTimer = 0f;
+                anim.SetInteger("attackIndex", attackIndex);
+                anim.SetTrigger("attack");
+            }
+        }
+
+    }
+
+    void ResetCombo()
+    {
+        isAttacking = false;
+        attackIndex = 0;
+        anim.SetInteger("attackIndex", 0);
+    }
+
+    public void EndAttack()
+    {
+        anim.ResetTrigger("attack"); // Reseta o trigger
+        if (attackIndex >= 3) ResetCombo(); // Reseta o combo
+    }
+
 }
