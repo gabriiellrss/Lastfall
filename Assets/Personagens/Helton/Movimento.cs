@@ -1,5 +1,5 @@
+﻿using UnityEngine;
 using System.Collections;
-using UnityEngine;
 
 public class Player : MonoBehaviour
 {
@@ -8,13 +8,13 @@ public class Player : MonoBehaviour
 
     public float walkSpeed = 4.5f;
     public float runSpeed = 7.5f;
-    public float sprintSpeed = 10f;
-    public float jumpForce = 7f;
-    public float gravity = 9.81f;
+    public float jumpForce = 10f;
+    public float gravity = 20f;
 
     private float verticalVelocity;
     private Vector3 moveDirection;
     private bool isJumping = false;
+    private bool canDoubleJump = false; // Adicionado para controle do pulo duplo
 
     public Transform cameraTransform;
 
@@ -36,13 +36,13 @@ public class Player : MonoBehaviour
 
     void Move()
     {
-        float horizontalInput = Input.GetAxisRaw("Horizontal");
-        float verticalInput = Input.GetAxisRaw("Vertical");
+        float horizontalInput = Input.GetAxis("Horizontal");
+        float verticalInput = Input.GetAxis("Vertical");
 
-        bool isRunning = Input.GetKey(KeyCode.LeftShift);
-        bool isSprinting = Input.GetKey(KeyCode.LeftControl) && isRunning;
+        bool isMoving = horizontalInput != 0 || verticalInput != 0;
+        bool isRunning = isMoving && Input.GetKey(KeyCode.LeftShift);
 
-        float currentSpeed = isSprinting ? sprintSpeed : (isRunning ? runSpeed : walkSpeed);
+        float currentSpeed = isRunning ? runSpeed : walkSpeed;
 
         Vector3 forward = cameraTransform.forward;
         Vector3 right = cameraTransform.right;
@@ -54,84 +54,80 @@ public class Player : MonoBehaviour
 
         Vector3 move = (forward * verticalInput + right * horizontalInput).normalized * currentSpeed;
 
+        // Controle de gravidade e pulo
         if (controller.isGrounded)
         {
-            if (verticalVelocity < 0)
-                verticalVelocity = -2f;
-
-            if (Input.GetKeyDown(KeyCode.Space) && !isJumping)
+            if (isJumping)
             {
-                StartCoroutine(JumpSequence(isRunning || isSprinting));
+                isJumping = false;
+            }
+
+            verticalVelocity = -1f; // Mantém o personagem no chão
+            canDoubleJump = true; // Reseta a habilidade de pulo duplo ao tocar o chão
+
+            if (Input.GetKeyDown(KeyCode.Backspace))
+            {
+                Jump();
             }
         }
         else
         {
+            if (Input.GetKeyDown(KeyCode.Backspace) && canDoubleJump) // Verifica se o pulo duplo pode ser usado
+            {
+                DoubleJump();
+            }
+
             verticalVelocity -= gravity * Time.deltaTime;
         }
 
         moveDirection = new Vector3(move.x, verticalVelocity, move.z);
         controller.Move(moveDirection * Time.deltaTime);
 
-        // Anima��es (se o Animator existir)
-        if (anim != null && controller.isGrounded && !isJumping)
-        {
-            if (horizontalInput != 0 || verticalInput != 0)
-            {
-                int animationState = GetMovementAnimation(horizontalInput, verticalInput, isRunning, isSprinting);
-                anim.SetInteger("transition", animationState);
+        // Atualiza animação corretamente
+        UpdateAnimation(isMoving, isRunning);
 
-                Quaternion targetRotation = Quaternion.LookRotation(new Vector3(moveDirection.x, 0, moveDirection.z));
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
-            }
-            else
+        // Rotação do personagem apenas se estiver se movendo
+        if (isMoving)
+        {
+            Vector3 moveDirectionFlat = new Vector3(move.x, 0, move.z);
+            if (moveDirectionFlat.magnitude > 0)
             {
-                anim.SetInteger("transition", 0); // Idle
+                Quaternion targetRotation = Quaternion.LookRotation(moveDirectionFlat);
+                transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
             }
         }
     }
 
-    int GetMovementAnimation(float horizontal, float vertical, bool running, bool sprinting)
+    void UpdateAnimation(bool isMoving, bool isRunning)
     {
-        if (sprinting)
+        if (anim == null) return;
+
+        if (isJumping)
         {
-            if (vertical > 0 && horizontal == 0) return 6;
-            if (vertical > 0 && horizontal < 0) return 7;
-            if (vertical > 0 && horizontal > 0) return 8;
+            anim.SetInteger("transition", isRunning ? 4 : 3);
         }
-        else if (running)
+        else if (isMoving)
         {
-            if (vertical > 0 && horizontal == 0) return 3;
-            if (vertical > 0 && horizontal < 0) return 4;
-            if (vertical > 0 && horizontal > 0) return 5;
+            anim.SetInteger("transition", isRunning ? 2 : 1);
         }
         else
         {
-            if (vertical > 0 && horizontal == 0) return 1;
-            if (vertical > 0 && horizontal < 0) return 2;
-            if (vertical > 0 && horizontal > 0) return 2;
-        }
-
-        return 0;
-    }
-
-    IEnumerator JumpSequence(bool isRunning)
-    {
-        isJumping = true;
-
-        if (anim != null)
-            anim.SetInteger("transition", isRunning ? 9 : 2);
-
-        yield return new WaitForSeconds(0.3f);
-
-        verticalVelocity = jumpForce;
-
-        yield return new WaitForSeconds(0.3f);
-
-        isJumping = false;
-
-        if (controller.isGrounded && anim != null)
-        {
             anim.SetInteger("transition", 0);
         }
+    }
+
+    void Jump()
+    {
+        isJumping = true;
+        verticalVelocity = jumpForce; // Aplica a força do pulo imediatamente
+        anim.SetInteger("transition", 3); // Define animação de pulo normal
+    }
+
+    void DoubleJump() // Função adicional para pulo duplo
+    {
+        isJumping = true;
+        canDoubleJump = false; // Impede outro pulo duplo
+        verticalVelocity = jumpForce; // Aplica a força do pulo duplo
+        anim.SetInteger("transition", 3); // Define animação de pulo normal
     }
 }

@@ -9,5 +9,5 @@ AnimatorOverrideController:
   m_Name: HumanF-Basic@Jump
   m_Controller: {fileID: 9100000, guid: 332444096c15b084095b21130cb73b66, type: 2}
   m_Clips:
-  - m_OriginalClip: {fileID: 3094330708855449807, guid: b0464a78fb8d2f34ca8c7b09bf4f08c6, type: 3}
-    m_OverrideClip: {fileID: 3094330708855449807, guid: fc2bbc9eb3f0e0f428219f9491de972b, type: 3}
+  - m_OriginalClip: {fileID: 5692786936955401851, guid: c337eaab751341e43ac0ba1c83ead291, type: 3}
+    m_OverrideClip: {fileID: 3094330708855449807, guid: 33332cc79a8e983428d3ba32af4c8997, type: 3}

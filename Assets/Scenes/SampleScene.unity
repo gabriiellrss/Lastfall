@@ -136,11 +136,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ea3eb990c307384eb8810ee847650ec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  walkSpeed: 1
-  runSpeed: 5
-  jumpForce: 5
+  walkSpeed: 4
+  runSpeed: 8
+  jumpForce: 8
   gravity: 9.8
   cameraTransform: {fileID: 0}
+  jumpKey: 32
+  runKey: 304
+  moveForward: 119
+  moveBackward: 115
+  moveLeft: 97
+  moveRight: 100
 --- !u!95 &81553145
 Animator:
   serializedVersion: 7
@@ -150,7 +156,7 @@ Animator:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 81553143}
   m_Enabled: 1
-  m_Avatar: {fileID: 0}
+  m_Avatar: {fileID: 9000000, guid: 4a11bf7e4ae22534abb901b3e2ffc715, type: 3}
   m_Controller: {fileID: 9100000, guid: ae3ea980ef80b1043a01471791d91b65, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
