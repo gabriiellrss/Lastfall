@@ -14,15 +14,30 @@ public class Player : MonoBehaviour
     private float verticalVelocity;
     private Vector3 moveDirection;
     private bool isJumping = false;
-    private bool canDoubleJump = false; // Adicionado para controle do pulo duplo
-
-    private bool isAttacking = false;
-    private int attackIndex = 1;
-    private float comboTimer = 0f;
-    public float comboResetTime = 1f; // Tempo para resetar o combo
-
+    private bool canDoubleJump = false;
 
     public Transform cameraTransform;
+
+    // Ataque
+    private bool isAttacking = false;
+    public float attackCooldown = 0.5f; // Tempo entre ataques
+    private float attackTimer = 0f;
+
+    // Sistema de Combo
+    private int currentCombo = 0;
+    public float comboWindow = 1.0f; // Tempo para continuar o combo
+    private float comboTimer = 0f;
+
+    // IDs das animações de ataque
+    public int attack1AnimID = 1;
+    public int attack2AnimID = 2;
+    public int attack3AnimID = 3;
+
+    private bool noChao = true;
+    private float velocidade = 0f;
+    private bool h1 = false;
+    private bool h2 = false;
+    private bool h3 = false;
 
     void Start()
     {
@@ -39,6 +54,7 @@ public class Player : MonoBehaviour
     {
         Move();
         HandleAttack();
+        HandleCombo();
     }
 
     void Move()
@@ -64,13 +80,14 @@ public class Player : MonoBehaviour
         // Controle de gravidade e pulo
         if (controller.isGrounded)
         {
+            noChao = true;
             if (isJumping)
             {
                 isJumping = false;
             }
 
-            verticalVelocity = -1f; // Mantém o personagem no chão
-            canDoubleJump = true; // Reseta a habilidade de pulo duplo ao tocar o chão
+            verticalVelocity = -1f;
+            canDoubleJump = true;
 
             if (Input.GetKeyDown(KeyCode.Backspace))
             {
@@ -79,7 +96,8 @@ public class Player : MonoBehaviour
         }
         else
         {
-            if (Input.GetKeyDown(KeyCode.Backspace) && canDoubleJump) // Verifica se o pulo duplo pode ser usado
+            noChao = false;
+            if (Input.GetKeyDown(KeyCode.Backspace) && canDoubleJump)
             {
                 DoubleJump();
             }
@@ -90,10 +108,8 @@ public class Player : MonoBehaviour
         moveDirection = new Vector3(move.x, verticalVelocity, move.z);
         controller.Move(moveDirection * Time.deltaTime);
 
-        // Atualiza animação corretamente
         UpdateAnimation(isMoving, isRunning);
 
-        // Rotação do personagem apenas se estiver se movendo
         if (isMoving)
         {
             Vector3 moveDirectionFlat = new Vector3(move.x, 0, move.z);
@@ -109,78 +125,133 @@ public class Player : MonoBehaviour
     {
         if (anim == null) return;
 
-        if (isJumping)
-        {
-            anim.SetInteger("transition", isRunning ? 4 : 3);
-        }
-        else if (isMoving)
-        {
-            anim.SetInteger("transition", isRunning ? 2 : 1);
-        }
-        else
-        {
-            anim.SetInteger("transition", 0);
-        }
+        // REMOVIDO: if (isAttacking) return;
+
+        // Atualiza os parametros do animator
+        anim.SetBool("noChao", noChao);
+        velocidade = isMoving ? (isRunning ? 2f : 1f) : 0f;
+        anim.SetFloat("velocidade", velocidade);
+
+        // Atualiza os parâmetros de ataque INDEPENDENTEMENTE se está atacando ou não
+        // A lógica em Attack() e ResetAttackState() controla os valores de h1, h2, h3
+        anim.SetBool("h1", h1);
+        anim.SetBool("h2", h2);
+        anim.SetBool("h3", h3);
+
+        // Adicione este log para ter certeza que está sendo chamado com os valores corretos
+        // Debug.Log($"UpdateAnimation - h1:{h1}, h2:{h2}, h3:{h3}");
     }
 
     void Jump()
     {
         isJumping = true;
-        verticalVelocity = jumpForce; // Aplica a força do pulo imediatamente
-        anim.SetInteger("transition", 3); // Define animação de pulo normal
+        verticalVelocity = jumpForce;
     }
 
-    void DoubleJump() // Função adicional para pulo duplo
+    void DoubleJump()
     {
         isJumping = true;
-        canDoubleJump = false; // Impede outro pulo duplo
-        verticalVelocity = jumpForce; // Aplica a força do pulo duplo
-        anim.SetInteger("transition", 3); // Define animação de pulo normal
+        canDoubleJump = false;
+        verticalVelocity = jumpForce;
     }
 
     void HandleAttack()
     {
-        if (isAttacking)
+        if (attackTimer > 0)
         {
-            comboTimer += Time.deltaTime;
-            if (comboTimer > comboResetTime)
-            {
-                ResetCombo();
-            }
+            attackTimer -= Time.deltaTime;
+            return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Space)) // Botão de ataque
+        if (Input.GetKeyDown(KeyCode.Mouse0) && !isAttacking)
         {
-            if (!isAttacking)
-            {
-                attackIndex = 1;
-                isAttacking = true;
-                comboTimer = 0f;
-                anim.SetInteger("attackIndex", attackIndex);
-                anim.SetTrigger("attack"); // Ativa o primeiro ataque
-            }
-            else if (attackIndex < 3) // Limita o combo a 3 ataques
-            {
-                attackIndex++;
-                comboTimer = 0f;
-                anim.SetInteger("attackIndex", attackIndex);
-                anim.SetTrigger("attack");
-            }
+            Debug.Log("Tentando atacar");
+            Attack();
         }
-
     }
 
-    void ResetCombo()
+    void Attack()
     {
+        isAttacking = true;
+
+        // Determina qual animação de ataque usar com base no combo
+        int attackAnimID = attack1AnimID; // Ataque padrão
+        switch (currentCombo)
+        {
+            case 0:
+                attackAnimID = attack1AnimID;
+                h1 = true;
+                h2 = false;
+                h3 = false;
+                break;
+            case 1:
+                attackAnimID = attack2AnimID;
+                h1 = false;
+                h2 = true;
+                h3 = false;
+                break;
+            case 2:
+                attackAnimID = attack3AnimID;
+                h1 = false;
+                h2 = false;
+                h3 = true;
+                break;
+        }
+
+        StartCoroutine(ResetAttackState(attackAnimID));  // Passa o ID da animação para a corrotina.
+
+        attackTimer = attackCooldown;
+        comboTimer = comboWindow; // Inicia a janela do combo.
+    }
+
+    IEnumerator ResetAttackState(int attackAnimID)
+    {
+        float animationDuration = 0.0f;
+        switch (attackAnimID)
+        {
+            case 1:  //attack1AnimID
+                animationDuration = 0.7f; // Duração da animação de ataque 1
+                break;
+            case 2:  //attack2AnimID
+                animationDuration = 0.8f; // Duração da animação de ataque 2
+                break;
+            case 3:  //attack3AnimID
+                animationDuration = 0.6f; // Duração da animação de ataque 3
+                verticalVelocity = jumpForce;
+                break;
+            default:
+                animationDuration = 0.7f;  // Duração padrão
+                break;
+        }
+        yield return new WaitForSeconds(animationDuration);
+
         isAttacking = false;
-        attackIndex = 0;
-        anim.SetInteger("attackIndex", 0);
+
+        // Avança o combo ou reseta se a janela tiver expirado
+        if (comboTimer > 0)
+        {
+            currentCombo = (currentCombo + 1) % 3; // Avança o combo (0 -> 1 -> 2 -> 0...)
+        }
+        else
+        {
+            currentCombo = 0;  // Reseta o combo
+        }
+
+        // Reseta os triggers de ataque
+        h1 = false;
+        h2 = false;
+        h3 = false;
     }
 
-    public void EndAttack()
+    void HandleCombo()
     {
-        anim.ResetTrigger("attack"); // Reseta o trigger
-        if (attackIndex >= 3) ResetCombo(); // Reseta o combo
+        if (comboTimer > 0)
+        {
+            comboTimer -= Time.deltaTime;
+        }
+        else
+        {
+            currentCombo = 0; // Reseta o combo se a janela expirar.
+        }
     }
-
 }
