@@ -18,23 +18,21 @@ public class Player : MonoBehaviour
 
     public Transform cameraTransform;
 
-    // Ataque
     private bool isAttacking = false;
-    public float attackCooldown = 0.5f; // Tempo entre ataques
+    public float attackCooldown = 0.5f;
     private float attackTimer = 0f;
 
-    // Sistema de Combo
     private int currentCombo = 0;
-    public float comboWindow = 1.0f; // Tempo para continuar o combo
+    public float comboWindow = 1.0f;
     private float comboTimer = 0f;
 
-    // IDs das animações de ataque
     public int attack1AnimID = 1;
     public int attack2AnimID = 2;
     public int attack3AnimID = 3;
 
     private bool noChao = true;
     private float velocidade = 0f;
+    private float attackVelocity = 0f;
     private bool h1 = false;
     private bool h2 = false;
     private bool h3 = false;
@@ -52,7 +50,10 @@ public class Player : MonoBehaviour
 
     void Update()
     {
-        Move();
+        if (!isAttacking)
+        {
+            Move();
+        }
         HandleAttack();
         HandleCombo();
     }
@@ -77,30 +78,23 @@ public class Player : MonoBehaviour
 
         Vector3 move = (forward * verticalInput + right * horizontalInput).normalized * currentSpeed;
 
-        // Controle de gravidade e pulo
         if (controller.isGrounded)
         {
             noChao = true;
             if (isJumping)
-            {
                 isJumping = false;
-            }
 
             verticalVelocity = -1f;
             canDoubleJump = true;
 
             if (Input.GetKeyDown(KeyCode.Backspace))
-            {
                 Jump();
-            }
         }
         else
         {
             noChao = false;
             if (Input.GetKeyDown(KeyCode.Backspace) && canDoubleJump)
-            {
                 DoubleJump();
-            }
 
             verticalVelocity -= gravity * Time.deltaTime;
         }
@@ -125,21 +119,15 @@ public class Player : MonoBehaviour
     {
         if (anim == null) return;
 
-        // REMOVIDO: if (isAttacking) return;
-
-        // Atualiza os parametros do animator
+        // Atualiza os parâmetros do animator
         anim.SetBool("noChao", noChao);
-        velocidade = isMoving ? (isRunning ? 2f : 1f) : 0f;
-        anim.SetFloat("velocidade", velocidade);
+        float finalVelocity = isAttacking ? attackVelocity : (isMoving ? (isRunning ? 2f : 1f) : 0f);
+        anim.SetFloat("velocidade", finalVelocity);
 
-        // Atualiza os parâmetros de ataque INDEPENDENTEMENTE se está atacando ou não
-        // A lógica em Attack() e ResetAttackState() controla os valores de h1, h2, h3
+        // Ativação correta das animações de ataque
         anim.SetBool("h1", h1);
         anim.SetBool("h2", h2);
         anim.SetBool("h3", h3);
-
-        // Adicione este log para ter certeza que está sendo chamado com os valores corretos
-        // Debug.Log($"UpdateAnimation - h1:{h1}, h2:{h2}, h3:{h3}");
     }
 
     void Jump()
@@ -165,7 +153,6 @@ public class Player : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Mouse0) && !isAttacking)
         {
-            Debug.Log("Tentando atacar");
             Attack();
         }
     }
@@ -173,74 +160,60 @@ public class Player : MonoBehaviour
     void Attack()
     {
         isAttacking = true;
+        attackVelocity = 0f;
 
-        // Determina qual animação de ataque usar com base no combo
-        int attackAnimID = attack1AnimID; // Ataque padrão
+        int attackAnimID = attack1AnimID;
         switch (currentCombo)
         {
-            case 0:
-                attackAnimID = attack1AnimID;
-                h1 = true;
-                h2 = false;
-                h3 = false;
-                break;
-            case 1:
-                attackAnimID = attack2AnimID;
-                h1 = false;
-                h2 = true;
-                h3 = false;
-                break;
-            case 2:
-                attackAnimID = attack3AnimID;
-                h1 = false;
-                h2 = false;
-                h3 = true;
-                break;
+            case 0: attackAnimID = attack1AnimID; h1 = true; h2 = false; h3 = false; break;
+            case 1: attackAnimID = attack2AnimID; h1 = false; h2 = true; h3 = false; break;
+            case 2: attackAnimID = attack3AnimID; h1 = false; h2 = false; h3 = true; break;
         }
 
-        StartCoroutine(ResetAttackState(attackAnimID));  // Passa o ID da animação para a corrotina.
+        anim.SetBool("h1", h1);
+        anim.SetBool("h2", h2);
+        anim.SetBool("h3", h3);
+
+        StartCoroutine(ResetAttackState(attackAnimID));
+        StartCoroutine(AttackDash(1.5f, 0.2f));
 
         attackTimer = attackCooldown;
-        comboTimer = comboWindow; // Inicia a janela do combo.
+        comboTimer = comboWindow;
     }
 
     IEnumerator ResetAttackState(int attackAnimID)
     {
-        float animationDuration = 0.0f;
+        float animationDuration = 0.7f;
         switch (attackAnimID)
         {
-            case 1:  //attack1AnimID
-                animationDuration = 0.7f; // Duração da animação de ataque 1
-                break;
-            case 2:  //attack2AnimID
-                animationDuration = 0.8f; // Duração da animação de ataque 2
-                break;
-            case 3:  //attack3AnimID
-                animationDuration = 0.6f; // Duração da animação de ataque 3
-                verticalVelocity = jumpForce;
-                break;
-            default:
-                animationDuration = 0.7f;  // Duração padrão
-                break;
+            case 1: animationDuration = 0.7f; break;
+            case 2: animationDuration = 0.8f; break;
+            case 3: animationDuration = 0.6f; verticalVelocity = jumpForce; break;
         }
         yield return new WaitForSeconds(animationDuration);
 
         isAttacking = false;
-
-        // Avança o combo ou reseta se a janela tiver expirado
+        attackVelocity = 0f;
         if (comboTimer > 0)
-        {
-            currentCombo = (currentCombo + 1) % 3; // Avança o combo (0 -> 1 -> 2 -> 0...)
-        }
+            currentCombo = (currentCombo + 1) % 3;
         else
-        {
-            currentCombo = 0;  // Reseta o combo
-        }
+            currentCombo = 0;
 
-        // Reseta os triggers de ataque
-        h1 = false;
-        h2 = false;
-        h3 = false;
+        h1 = h2 = h3 = false;
+    }
+
+    IEnumerator AttackDash(float distance, float duration)
+    {
+        float elapsed = 0f;
+        Vector3 startPosition = transform.position;
+        Vector3 targetPosition = startPosition + transform.forward * distance;
+
+        while (elapsed < duration)
+        {
+            transform.position = Vector3.Lerp(startPosition, targetPosition, elapsed / duration);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
     }
 
     void HandleCombo()
@@ -251,7 +224,7 @@ public class Player : MonoBehaviour
         }
         else
         {
-            currentCombo = 0; // Reseta o combo se a janela expirar.
+            currentCombo = 0;
         }
     }
 }
