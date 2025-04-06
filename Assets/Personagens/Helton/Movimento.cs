@@ -19,11 +19,11 @@ public class Player : MonoBehaviour
     public Transform cameraTransform;
 
     private bool isAttacking = false;
-    public float attackCooldown = 0.5f;
+    public float attackCooldown = 0f;
     private float attackTimer = 0f;
 
     private int currentCombo = 0;
-    public float comboWindow = 1.0f;
+    public float comboWindow = 0f;
     private float comboTimer = 0f;
 
     public int attack1AnimID = 1;
@@ -151,7 +151,7 @@ public class Player : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Mouse0) && !isAttacking)
+        if (Input.GetKeyDown(KeyCode.Space) && !isAttacking)
         {
             Attack();
         }
@@ -183,12 +183,12 @@ public class Player : MonoBehaviour
 
     IEnumerator ResetAttackState(int attackAnimID)
     {
-        float animationDuration = 0.7f;
+        float animationDuration = 0.1f;
         switch (attackAnimID)
         {
-            case 1: animationDuration = 0.7f; break;
-            case 2: animationDuration = 0.8f; break;
-            case 3: animationDuration = 0.6f; verticalVelocity = jumpForce; break;
+            case 1: animationDuration = 0.3f; break;
+            case 2: animationDuration = 0.2f; break;
+            case 3: animationDuration = 0.1f; verticalVelocity = jumpForce; break;
         }
         yield return new WaitForSeconds(animationDuration);
 
@@ -227,4 +227,6 @@ public class Player : MonoBehaviour
             currentCombo = 0;
         }
     }
+
+
 }
