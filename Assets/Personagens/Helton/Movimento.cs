@@ -160,6 +160,7 @@ public class Player : MonoBehaviour
     void Attack()
     {
         isAttacking = true;
+        
         attackVelocity = 0f;
 
         int attackAnimID = attack1AnimID;
@@ -179,6 +180,7 @@ public class Player : MonoBehaviour
 
         attackTimer = attackCooldown;
         comboTimer = comboWindow;
+        isAttacking = false;
     }
 
     IEnumerator ResetAttackState(int attackAnimID)
@@ -188,11 +190,11 @@ public class Player : MonoBehaviour
         {
             case 1: animationDuration = 0.3f; break;
             case 2: animationDuration = 0.2f; break;
-            case 3: animationDuration = 0.1f; verticalVelocity = jumpForce; break;
+            case 3: animationDuration = 0.1f; break;
         }
         yield return new WaitForSeconds(animationDuration);
 
-        isAttacking = false;
+      
         attackVelocity = 0f;
         if (comboTimer > 0)
             currentCombo = (currentCombo + 1) % 3;
