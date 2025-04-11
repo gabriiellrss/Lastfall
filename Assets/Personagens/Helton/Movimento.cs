@@ -200,7 +200,9 @@ public class Player : MonoBehaviour
     void Attack()
     {
         isAttacking = true;
-        //Instantiate(attackEffectPrefab, effectSpawnPoint.position, effectSpawnPoint.rotation);
+        //GameObject effect = Instantiate(attackEffectPrefab, effectSpawnPoint.position, effectSpawnPoint.rotation);
+        //Destroy(effect, 1.5f);
+
         //wwwwwwwanim.applyRootMotion = true;
 
         //GameObject effecthand = Instantiate(attackEffectPrefab, rightHand.position, rightHand.rotation);
