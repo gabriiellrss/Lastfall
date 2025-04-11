@@ -22,6 +22,7 @@ public class Player : MonoBehaviour
     public Transform cameraTransform;
 
     public GameObject rightHand;
+    public GameObject leftHand;
 
     private bool isAttacking = false;
     private float attackCooldown = 0f;
@@ -76,8 +77,11 @@ public class Player : MonoBehaviour
         float currentSpeed = 0f;
         Vector3 move = Vector3.zero;
 
+
         if (!isAttacking)
         {
+            rightHand.GetComponent<TrailRenderer>().emitting = false;
+            leftHand.GetComponent<TrailRenderer>().emitting = false;
             horizontalInput = Input.GetAxis("Horizontal");
             verticalInput = Input.GetAxis("Vertical");
             isMoving = horizontalInput != 0 || verticalInput != 0;
@@ -208,7 +212,6 @@ public class Player : MonoBehaviour
         //GameObject effecthand = Instantiate(attackEffectPrefab, rightHand.position, rightHand.rotation);
         //Destroy(effecthand, 1.5f); // Destroi o efeito após 1.5 segundos
 
-        rightHand.GetComponent<TrailRenderer>().emitting = true;
 
         attackTimer = attackCooldown;
 
@@ -224,6 +227,8 @@ public class Player : MonoBehaviour
                 dashDistance = attack1DashDistance;
                 dashDuration = attack2DashDuration;
                 anim.SetTrigger("Attack1");
+                rightHand.GetComponent<TrailRenderer>().emitting = true;
+                leftHand.GetComponent<TrailRenderer>().emitting = false;
                 break;
 
             case 1:
@@ -231,6 +236,8 @@ public class Player : MonoBehaviour
                 dashDistance = attack2DashDistance;
                 dashDuration = attack2DashDuration;
                 anim.SetTrigger("Attack2");
+                leftHand.GetComponent<TrailRenderer>().emitting = true;
+                rightHand.GetComponent<TrailRenderer>().emitting = false;
                 break;
 
             case 2:
@@ -239,6 +246,7 @@ public class Player : MonoBehaviour
                 dashDistance = attack3DashDistance;
                 dashDuration = attack3DashDuration;
                 performJump = controller.isGrounded;
+                leftHand.GetComponent<TrailRenderer>().emitting = false;
                 break;
         }
 
@@ -257,7 +265,6 @@ public class Player : MonoBehaviour
 
         comboTimer = comboWindow;
         StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimID)));
-
 
     }
 
@@ -294,7 +301,7 @@ public class Player : MonoBehaviour
             anim.applyRootMotion = false;
             Debug.Log("Estado de ataque resetado. Próximo combo: " + currentCombo);
         }
-        rightHand.GetComponent<TrailRenderer>().emitting = false;
+
 
     }
 
