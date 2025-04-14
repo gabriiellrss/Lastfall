@@ -1,5 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.InputSystem;
+
 
 public class Player : MonoBehaviour
 {
@@ -23,6 +25,7 @@ public class Player : MonoBehaviour
 
     public GameObject rightHand;
     public GameObject leftHand;
+    public GameObject rightToe;
 
     private bool isAttacking = false;
     private float attackCooldown = 0f;
@@ -177,7 +180,7 @@ public class Player : MonoBehaviour
         canDoubleJump = false;
         isJumping = true;
         noChao = false;
-        anim.SetTrigger("Pular");
+        anim.SetTrigger("DoubleJump");
     }
 
     void HandleAttack()
@@ -227,6 +230,7 @@ public class Player : MonoBehaviour
                 dashDistance = attack1DashDistance;
                 dashDuration = attack2DashDuration;
                 anim.SetTrigger("Attack1");
+                rightToe.GetComponent<TrailRenderer>().emitting = false;
                 rightHand.GetComponent<TrailRenderer>().emitting = true;
                 leftHand.GetComponent<TrailRenderer>().emitting = false;
                 break;
@@ -247,6 +251,7 @@ public class Player : MonoBehaviour
                 dashDuration = attack3DashDuration;
                 performJump = controller.isGrounded;
                 leftHand.GetComponent<TrailRenderer>().emitting = false;
+                rightToe.GetComponent<TrailRenderer>().emitting = true;
                 break;
         }
 
