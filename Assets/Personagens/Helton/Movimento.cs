@@ -88,7 +88,7 @@ public class Player : MonoBehaviour
             horizontalInput = Input.GetAxis("Horizontal");
             verticalInput = Input.GetAxis("Vertical");
             isMoving = horizontalInput != 0 || verticalInput != 0;
-            isRunning = isMoving && Input.GetKey(KeyCode.LeftShift) || Input.GetButton("Fire1");
+            isRunning = isMoving && Input.GetKey(KeyCode.LeftShift) || Input.GetButton("Run");
             currentSpeed = isRunning ? runSpeed : walkSpeed;
 
             Vector3 forward = cameraTransform.forward;
@@ -149,14 +149,14 @@ public class Player : MonoBehaviour
         float currentHorizontalSpeed = horizontalVelocity.magnitude;
 
         float animatorSpeed = 0f;
-        if (!isAttacking)
-        {
-            bool isRunning = Input.GetButton("Fire1");
+        //if (!isAttacking)
+        //{
+            bool isRunning = Input.GetButton("Run");
             if (currentHorizontalSpeed > 0.1f)
             {
                 animatorSpeed = isRunning ? 2f : 1f;
             }
-        }
+        //}
 
         anim.SetFloat("velocidade", animatorSpeed);
         anim.SetBool("noChao", noChao);
@@ -191,7 +191,7 @@ public class Player : MonoBehaviour
         }
 
         // 🔁 Agora registra o clique mesmo durante ataque
-        if (Input.GetButtonDown("Fire3"))
+        if (Input.GetButtonDown("Fire2"))
         {
             if (!isAttacking && attackTimer <= 0)
             {
