@@ -231,6 +231,8 @@ public class Player : MonoBehaviour
                 anim.SetTrigger("Attack1");
                 //CinemachineShake.Instance.ShakeCamera(5f, .1f);
                 //slowMo.TriggerSlowMotionTimed(0.3f, 5f, 1f); // 30% velocidade, suaviza com speed 5, dura 1 segundo
+                SlowMotion(0.1f, 0.1f); // desacelera para 30% por 0.5s
+
                 rightToe.GetComponent<TrailRenderer>().emitting = false;
                 rightHand.GetComponent<TrailRenderer>().emitting = true;
                 leftHand.GetComponent<TrailRenderer>().emitting = false;
@@ -241,6 +243,7 @@ public class Player : MonoBehaviour
                 dashDistance = attack2DashDistance;
                 dashDuration = attack2DashDuration;
                 anim.SetTrigger("Attack2");
+                SlowMotion(0.1f, 0.2f);
                 leftHand.GetComponent<TrailRenderer>().emitting = true;
                 rightHand.GetComponent<TrailRenderer>().emitting = false;
                 break;
@@ -250,6 +253,7 @@ public class Player : MonoBehaviour
                 anim.SetTrigger("Attack3");
                 dashDistance = attack3DashDistance;
                 dashDuration = attack3DashDuration;
+                SlowMotion(0.1f, 0.3f);
                 leftHand.GetComponent<TrailRenderer>().emitting = false;
                 rightToe.GetComponent<TrailRenderer>().emitting = true;
                 break;
@@ -328,7 +332,20 @@ public class Player : MonoBehaviour
         }
     }
 
+    public void SlowMotion(float slowAmount, float duration)
+    {
+        StartCoroutine(DoSlowMotion(slowAmount, duration));
+    }
 
+    private IEnumerator DoSlowMotion(float slowAmount, float duration)
+    {
+        Time.timeScale = slowAmount;
+        Time.fixedDeltaTime = 0.02f * Time.timeScale;  // mantém a física sincronizada
 
+        yield return new WaitForSecondsRealtime(duration);  // espera em tempo real
+
+        Time.timeScale = 1f;
+        Time.fixedDeltaTime = 0.02f;
+    }
 
 }
