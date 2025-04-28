@@ -320,10 +320,10 @@ MonoBehaviour:
   leftHand: {fileID: 1240017906}
   rightToe: {fileID: 76286594}
   attack1DashDistance: 1
-  attack2DashDistance: 1.5
-  attack2DashDuration: 0.2
+  attack2DashDistance: 1
+  attack2DashDuration: 0.1
   attack3DashDistance: 2
-  attack3DashDuration: 0.25
+  attack3DashDuration: 0.1
 --- !u!1 &317976281
 GameObject:
   m_ObjectHideFlags: 0

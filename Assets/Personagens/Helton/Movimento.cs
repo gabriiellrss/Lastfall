@@ -44,8 +44,7 @@ public class Player : MonoBehaviour
     private int attack1AnimID = 1;
     private int attack2AnimID = 2;
     private int attack3AnimID = 3;
-
-
+    private int attack4AnimID = 4;
 
     private bool noChao = true;
 
@@ -209,6 +208,18 @@ public class Player : MonoBehaviour
                 bufferedAttack = true; // Armazena o clique
             }
         }
+
+        if (Input.GetButtonDown("Fire1"))
+        {
+            if (!isAttacking && attackTimer <= 0)
+            {
+                Attack2();
+            }
+            else
+            {
+                bufferedAttack = true; // Armazena o clique
+            }
+        }
     }
 
     void Attack()
@@ -231,7 +242,7 @@ public class Player : MonoBehaviour
                 anim.SetTrigger("Attack1");
                 //CinemachineShake.Instance.ShakeCamera(5f, .1f);
                 //slowMo.TriggerSlowMotionTimed(0.3f, 5f, 1f); // 30% velocidade, suaviza com speed 5, dura 1 segundo
-                SlowMotion(0.1f, 0.1f); // desacelera para 30% por 0.5s
+                //SlowMotion(0.1f, 0.1f); // desacelera para 30% por 0.5s
 
                 rightToe.GetComponent<TrailRenderer>().emitting = false;
                 rightHand.GetComponent<TrailRenderer>().emitting = true;
@@ -243,7 +254,7 @@ public class Player : MonoBehaviour
                 dashDistance = attack2DashDistance;
                 dashDuration = attack2DashDuration;
                 anim.SetTrigger("Attack2");
-                SlowMotion(0.1f, 0.2f);
+                //SlowMotion(0.1f, 0.2f);
                 leftHand.GetComponent<TrailRenderer>().emitting = true;
                 rightHand.GetComponent<TrailRenderer>().emitting = false;
                 break;
@@ -253,8 +264,17 @@ public class Player : MonoBehaviour
                 anim.SetTrigger("Attack3");
                 dashDistance = attack3DashDistance;
                 dashDuration = attack3DashDuration;
-                SlowMotion(0.1f, 0.3f);
+                //SlowMotion(0.5f, 0.3f);
                 leftHand.GetComponent<TrailRenderer>().emitting = false;
+                rightToe.GetComponent<TrailRenderer>().emitting = true;
+                break;
+            case 3:
+                attackAnimID = attack4AnimID;
+                anim.SetTrigger("Attack4");
+                dashDistance = attack3DashDistance;
+                dashDuration = attack3DashDuration;
+                DelayedSlowMotion(0.2f, 0.3f, 0.4f); // Slowmotion começa 0.2s depois
+                leftHand.GetComponent<TrailRenderer>().emitting = true;
                 rightToe.GetComponent<TrailRenderer>().emitting = true;
                 break;
         }
@@ -264,7 +284,73 @@ public class Player : MonoBehaviour
             StartCoroutine(AttackDash(dashDistance, dashDuration));
         }
 
-        comboTimer = comboWindow;
+        comboTimer = 5f;
+        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimID)));
+    }
+
+    void Attack2()
+    {
+        isAttacking = true;
+        anim.SetBool("isAttacking", true); // <-- Aqui ativamos
+
+        attackTimer = attackCooldown;
+
+        int attackAnimID = attack1AnimID;
+        float dashDistance = 0f;
+        float dashDuration = 0f;
+
+        switch (currentCombo)
+        {
+            case 0:
+                attackAnimID = attack1AnimID;
+                dashDistance = attack1DashDistance;
+                dashDuration = attack2DashDuration;
+                anim.SetTrigger("c2Attack1");
+                //CinemachineShake.Instance.ShakeCamera(5f, .1f);
+                //slowMo.TriggerSlowMotionTimed(0.3f, 5f, 1f); // 30% velocidade, suaviza com speed 5, dura 1 segundo
+                //SlowMotion(0.1f, 0.1f); // desacelera para 30% por 0.5s
+
+                rightToe.GetComponent<TrailRenderer>().emitting = false;
+                rightHand.GetComponent<TrailRenderer>().emitting = true;
+                leftHand.GetComponent<TrailRenderer>().emitting = false;
+                break;
+
+            case 1:
+                attackAnimID = attack2AnimID;
+                dashDistance = attack2DashDistance;
+                dashDuration = attack2DashDuration;
+                anim.SetTrigger("c2Attack2");
+                //SlowMotion(0.1f, 0.2f);
+                leftHand.GetComponent<TrailRenderer>().emitting = true;
+                rightHand.GetComponent<TrailRenderer>().emitting = false;
+                break;
+
+            case 2:
+                attackAnimID = attack3AnimID;
+                anim.SetTrigger("c2Attack3");
+                dashDistance = attack3DashDistance;
+                dashDuration = attack3DashDuration;
+                //SlowMotion(0.5f, 0.3f);
+                leftHand.GetComponent<TrailRenderer>().emitting = false;
+                rightToe.GetComponent<TrailRenderer>().emitting = true;
+                break;
+            case 3:
+                attackAnimID = attack4AnimID;
+                anim.SetTrigger("Attack4");
+                dashDistance = attack3DashDistance;
+                dashDuration = attack3DashDuration;
+                DelayedSlowMotion(0.2f, 0.3f, 0.4f); // Slowmotion começa 0.2s depois
+                leftHand.GetComponent<TrailRenderer>().emitting = true;
+                rightToe.GetComponent<TrailRenderer>().emitting = true;
+                break;
+        }
+
+        if (dashDistance > 0 && dashDuration > 0)
+        {
+            StartCoroutine(AttackDash(dashDistance, dashDuration));
+        }
+
+        comboTimer = 5f;
         StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimID)));
     }
 
@@ -273,16 +359,29 @@ public class Player : MonoBehaviour
         if (attackID == attack1AnimID) return 0.4f;
         if (attackID == attack2AnimID) return 0.5f;
         if (attackID == attack3AnimID) return 0.6f;
+        if (attackID == attack4AnimID) return 0.7f;
         return 0.4f;
     }
 
     IEnumerator ResetAttackState(float animationDuration)
     {
+
+        // Se for o ataque 3, adiciona mais tempo antes de resetar
+        if (currentCombo == 2)
+        {
+            animationDuration += 0.3f; // adiciona 0.5 segundos extras (ajuste como quiser)
+        }
+
+        if (currentCombo == 3)
+        {
+            animationDuration += 0.5f; // adiciona 0.5 segundos extras (ajuste como quiser)
+        }
+
         yield return new WaitForSeconds(animationDuration);
 
         if (comboTimer > 0)
         {
-            currentCombo = (currentCombo + 1) % 3;
+            currentCombo = (currentCombo + 1) % 4;
         }
         else
         {
@@ -297,11 +396,10 @@ public class Player : MonoBehaviour
         else
         {
             isAttacking = false;
-            anim.SetBool("isAttacking", false); // <-- Aqui desativamos
+            anim.SetBool("isAttacking", false);
             Debug.Log("Estado de ataque resetado. Próximo combo: " + currentCombo);
         }
     }
-
 
     IEnumerator AttackDash(float distance, float duration)
     {
@@ -332,17 +430,21 @@ public class Player : MonoBehaviour
         }
     }
 
-    public void SlowMotion(float slowAmount, float duration)
+
+    // SlowMotion com atraso
+    void DelayedSlowMotion(float delay, float slowAmount, float duration)
     {
-        StartCoroutine(DoSlowMotion(slowAmount, duration));
+        StartCoroutine(DoDelayedSlowMotion(delay, slowAmount, duration));
     }
 
-    private IEnumerator DoSlowMotion(float slowAmount, float duration)
+    private IEnumerator DoDelayedSlowMotion(float delay, float slowAmount, float duration)
     {
-        Time.timeScale = slowAmount;
-        Time.fixedDeltaTime = 0.02f * Time.timeScale;  // mantém a física sincronizada
+        yield return new WaitForSecondsRealtime(delay); // espera antes de iniciar o slow
 
-        yield return new WaitForSecondsRealtime(duration);  // espera em tempo real
+        Time.timeScale = slowAmount;
+        Time.fixedDeltaTime = 0.02f * Time.timeScale;
+
+        yield return new WaitForSecondsRealtime(duration); // dura o tempo necessário
 
         Time.timeScale = 1f;
         Time.fixedDeltaTime = 0.02f;
