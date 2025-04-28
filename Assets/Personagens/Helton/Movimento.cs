@@ -73,6 +73,20 @@ public class Player : MonoBehaviour
         HandleAttack();
         HandleCombo();
         UpdateAnimation();
+        pose();
+
+    }
+
+    void pose()
+    {
+        if (Input.GetKey(KeyCode.I))
+        {
+            anim.SetBool("isPose", true);
+        }
+        else
+        {
+            anim.SetBool("isPose", false);
+        }
     }
 
     void Move()
@@ -350,7 +364,7 @@ public class Player : MonoBehaviour
             StartCoroutine(AttackDash(dashDistance, dashDuration));
         }
 
-        comboTimer = 5f;
+        comboTimer = 1f;
         StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimID)));
     }
 
@@ -369,7 +383,7 @@ public class Player : MonoBehaviour
         // Se for o ataque 3, adiciona mais tempo antes de resetar
         if (currentCombo == 2)
         {
-            animationDuration += 0.3f; // adiciona 0.5 segundos extras (ajuste como quiser)
+            animationDuration += 0.1f; // adiciona 0.5 segundos extras (ajuste como quiser)
         }
 
         if (currentCombo == 3)
