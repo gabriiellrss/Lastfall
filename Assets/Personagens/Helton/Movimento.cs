@@ -45,6 +45,8 @@ public class Player : MonoBehaviour
     private int attack2AnimID = 2;
     private int attack3AnimID = 3;
     private int attack4AnimID = 4;
+    private int attack5AnimID = 5;
+    private int attack6AnimID = 6;
 
     private bool noChao = true;
 
@@ -316,7 +318,7 @@ public class Player : MonoBehaviour
         switch (currentCombo)
         {
             case 0:
-                attackAnimID = attack1AnimID;
+                attackAnimID = 5;
                 dashDistance = attack1DashDistance;
                 dashDuration = attack2DashDuration;
                 anim.SetTrigger("c2Attack1");
@@ -330,7 +332,7 @@ public class Player : MonoBehaviour
                 break;
 
             case 1:
-                attackAnimID = attack2AnimID;
+                attackAnimID = 6;
                 dashDistance = attack2DashDistance;
                 dashDuration = attack2DashDuration;
                 anim.SetTrigger("c2Attack2");
@@ -340,7 +342,7 @@ public class Player : MonoBehaviour
                 break;
 
             case 2:
-                attackAnimID = attack3AnimID;
+                attackAnimID = 7;
                 anim.SetTrigger("c2Attack3");
                 dashDistance = attack3DashDistance;
                 dashDuration = attack3DashDuration;
@@ -349,7 +351,7 @@ public class Player : MonoBehaviour
                 rightToe.GetComponent<TrailRenderer>().emitting = true;
                 break;
             case 3:
-                attackAnimID = attack4AnimID;
+                attackAnimID = 8;
                 anim.SetTrigger("Attack4");
                 dashDistance = attack3DashDistance;
                 dashDuration = attack3DashDuration;
@@ -364,16 +366,23 @@ public class Player : MonoBehaviour
             StartCoroutine(AttackDash(dashDistance, dashDuration));
         }
 
-        comboTimer = 1f;
+        comboTimer = 5f;
         StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimID)));
     }
 
     float GetAnimationDuration(int attackID)
     {
+        //combo 1
         if (attackID == attack1AnimID) return 0.4f;
         if (attackID == attack2AnimID) return 0.5f;
         if (attackID == attack3AnimID) return 0.6f;
         if (attackID == attack4AnimID) return 0.7f;
+
+        //combo2
+        if (attackID == 5) return 0.4f;
+        if (attackID == 6) return 0.6f;
+        if (attackID == 7) return 0.6f;
+        if (attackID == 8) return 0.7f;
         return 0.4f;
     }
 
@@ -390,6 +399,8 @@ public class Player : MonoBehaviour
         {
             animationDuration += 0.5f; // adiciona 0.5 segundos extras (ajuste como quiser)
         }
+
+       
 
         yield return new WaitForSeconds(animationDuration);
 
