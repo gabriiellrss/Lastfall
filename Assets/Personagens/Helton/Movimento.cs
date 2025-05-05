@@ -34,12 +34,16 @@ public class Player : MonoBehaviour
     private float attackCooldown = 0f;
     private float attackTimer = 0f;
 
-    private int currentCombo = 0;
     private float comboWindow = 0.6f; // Janela de combo ajustada
-    private float comboTimer = 0f;
+
+    private int currentCombo1 = 0;
+    private int currentCombo2 = 0;
+    private float comboTimer1 = 0f;
+    private float comboTimer2 = 0f;
 
     // 🆕 Buffer de ataque
-    private bool bufferedAttack = false;
+    private bool bufferedAttack1 = false;
+    private bool bufferedAttack2 = false;
 
     private int attack1AnimID = 1;
     private int attack2AnimID = 2;
@@ -183,7 +187,6 @@ public class Player : MonoBehaviour
         anim.SetBool("noChao", noChao);
     }
 
-
     void Jump()
     {
         if (!isJumping)
@@ -212,29 +215,16 @@ public class Player : MonoBehaviour
             attackTimer -= Time.deltaTime;
         }
 
-        // 🔁 Agora registra o clique mesmo durante ataque
         if (Input.GetButtonDown("Fire2"))
         {
-            if (!isAttacking && attackTimer <= 0)
-            {
-                Attack();
-            }
-            else
-            {
-                bufferedAttack = true; // Armazena o clique
-            }
+            if (!isAttacking && attackTimer <= 0) Attack();
+            else bufferedAttack1 = true;
         }
 
         if (Input.GetButtonDown("Fire1"))
         {
-            if (!isAttacking && attackTimer <= 0)
-            {
-                Attack2();
-            }
-            else
-            {
-                bufferedAttack = true; // Armazena o clique
-            }
+            if (!isAttacking && attackTimer <= 0) Attack2();
+            else bufferedAttack2 = true;
         }
     }
 
@@ -249,7 +239,7 @@ public class Player : MonoBehaviour
         float dashDistance = 0f;
         float dashDuration = 0f;
 
-        switch (currentCombo)
+        switch (currentCombo1)
         {
             case 0:
                 attackAnimID = attack1AnimID;
@@ -300,8 +290,8 @@ public class Player : MonoBehaviour
             StartCoroutine(AttackDash(dashDistance, dashDuration));
         }
 
-        comboTimer = 5f;
-        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimID)));
+        comboTimer1 = 1f;
+        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimID), true)); // true = combo1
     }
 
     void Attack2()
@@ -315,7 +305,7 @@ public class Player : MonoBehaviour
         float dashDistance = 0f;
         float dashDuration = 0f;
 
-        switch (currentCombo)
+        switch (currentCombo2)
         {
             case 0:
                 attackAnimID = 5;
@@ -328,7 +318,7 @@ public class Player : MonoBehaviour
 
                 rightToe.GetComponent<TrailRenderer>().emitting = false;
                 rightHand.GetComponent<TrailRenderer>().emitting = true;
-                leftHand.GetComponent<TrailRenderer>().emitting = false;
+                leftHand.GetComponent<TrailRenderer>().emitting = true;
                 break;
 
             case 1:
@@ -352,7 +342,7 @@ public class Player : MonoBehaviour
                 break;
             case 3:
                 attackAnimID = 8;
-                anim.SetTrigger("Attack4");
+                anim.SetTrigger("c2Attack4");
                 dashDistance = attack3DashDistance;
                 dashDuration = attack3DashDuration;
                 DelayedSlowMotion(0.2f, 0.3f, 0.4f); // Slowmotion começa 0.2s depois
@@ -366,8 +356,8 @@ public class Player : MonoBehaviour
             StartCoroutine(AttackDash(dashDistance, dashDuration));
         }
 
-        comboTimer = 5f;
-        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimID)));
+        comboTimer2 = 6f;
+        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimID), false)); // true = combo1
     }
 
     float GetAnimationDuration(int attackID)
@@ -386,43 +376,71 @@ public class Player : MonoBehaviour
         return 0.4f;
     }
 
-    IEnumerator ResetAttackState(float animationDuration)
+    IEnumerator ResetAttackState(float animationDuration, bool isCombo1)
     {
+        // Adiciona delay extra dependendo do ataque atual
+        int currentCombo = isCombo1 ? currentCombo1 : currentCombo2;
 
-        // Se for o ataque 3, adiciona mais tempo antes de resetar
-        if (currentCombo == 2)
+        /*if (currentCombo == 2)
+            animationDuration += 0.1f;
+        else if (currentCombo == 3)
+            animationDuration += 0.5f;*/
+
+        if(isCombo1 == true)
         {
-            animationDuration += 0.1f; // adiciona 0.5 segundos extras (ajuste como quiser)
+            // Se for o ataque 3, adiciona mais tempo antes de resetar
+            if (currentCombo == 2)
+            {
+                animationDuration += 0.1f; // adiciona 0.5 segundos extras (ajuste como quiser)
+            }
+
+            if (currentCombo == 3)
+            {
+                animationDuration += 0.5f; // adiciona 0.5 segundos extras (ajuste como quiser)
+            }
         }
 
-        if (currentCombo == 3)
+
+            yield return new WaitForSeconds(animationDuration);
+
+        // Atualiza combo
+        if (isCombo1)
         {
-            animationDuration += 0.5f; // adiciona 0.5 segundos extras (ajuste como quiser)
-        }
-
-       
-
-        yield return new WaitForSeconds(animationDuration);
-
-        if (comboTimer > 0)
-        {
-            currentCombo = (currentCombo + 1) % 4;
+            if (comboTimer1 > 0)
+                currentCombo1 = (currentCombo1 + 1) % 4;
+            else
+                currentCombo1 = 0;
         }
         else
         {
-            currentCombo = 0;
+            if (comboTimer2 > 0)
+                currentCombo2 = (currentCombo2 + 1) % 4;
+            else
+                currentCombo2 = 0;
         }
 
-        if (bufferedAttack)
+        // Verifica ataque em buffer
+        if (isCombo1 && bufferedAttack1)
         {
-            bufferedAttack = false;
-            Attack(); // Executa próximo ataque automaticamente
+            bufferedAttack1 = false;
+            Attack(); // Chama próximo ataque imediatamente
+        }
+        else if (!isCombo1 && bufferedAttack2)
+        {
+            bufferedAttack2 = false;
+            Attack2(); // Chama próximo ataque imediatamente
         }
         else
         {
+            // Finaliza ataque se não há buffer
             isAttacking = false;
             anim.SetBool("isAttacking", false);
-            Debug.Log("Estado de ataque resetado. Próximo combo: " + currentCombo);
+            Debug.Log("Estado de ataque resetado.");
+
+            // Reseta trails
+            //rightHand.GetComponent<TrailRenderer>().emitting = false;
+            //leftHand.GetComponent<TrailRenderer>().emitting = false;
+            //rightToe.GetComponent<TrailRenderer>().emitting = false;
         }
     }
 
@@ -444,13 +462,21 @@ public class Player : MonoBehaviour
 
     void HandleCombo()
     {
-        if (comboTimer > 0)
+        if (comboTimer1 > 0)
         {
-            comboTimer -= Time.deltaTime;
-            if (comboTimer <= 0)
+            comboTimer1 -= Time.deltaTime;
+            if (comboTimer1 <= 0)
             {
-                currentCombo = 0;
-                Debug.Log("Janela de Combo Expirou. Resetando combo.");
+                currentCombo1 = 0;
+            }
+        }
+
+        if (comboTimer2 > 0)
+        {
+            comboTimer2 -= Time.deltaTime;
+            if (comboTimer2 <= 0)
+            {
+                currentCombo2 = 0;
             }
         }
     }
