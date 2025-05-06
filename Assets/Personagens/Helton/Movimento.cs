@@ -14,6 +14,14 @@ public class Player : MonoBehaviour
     public GameObject attackEffectPrefab;     // arrasta o prefab do efeito aqui no Inspector
     public Transform effectSpawnPoint;
 
+    [Header("Demage")] 
+    public LayerMask enemylayer;
+    public float attackRadius = 3f;
+    public float attackDemage = 10f;
+    public Transform areaTransform;
+
+
+    [Header("Speeds")]
     public float walkSpeed = 4.5f;
     public float runSpeed = 7.5f;
     public float jumpForce = 10f;
@@ -26,6 +34,7 @@ public class Player : MonoBehaviour
 
     public Transform cameraTransform;
 
+    [Header("Collions Hands e Toes")]
     public GameObject rightHand;
     public GameObject leftHand;
     public GameObject rightToe;
@@ -54,6 +63,7 @@ public class Player : MonoBehaviour
 
     private bool noChao = true;
 
+    [Header("Attacks")]
     public float attack1DashDistance = 1.0f;
     public float attack2DashDistance = 1.0f;
     public float attack2DashDuration = 0.1f;
@@ -250,6 +260,7 @@ public class Player : MonoBehaviour
                 //slowMo.TriggerSlowMotionTimed(0.3f, 5f, 1f); // 30% velocidade, suaviza com speed 5, dura 1 segundo
                 //SlowMotion(0.1f, 0.1f); // desacelera para 30% por 0.5s
 
+                Demage();
                 rightToe.GetComponent<TrailRenderer>().emitting = false;
                 rightHand.GetComponent<TrailRenderer>().emitting = true;
                 leftHand.GetComponent<TrailRenderer>().emitting = false;
@@ -261,6 +272,7 @@ public class Player : MonoBehaviour
                 dashDuration = attack2DashDuration;
                 anim.SetTrigger("Attack2");
                 //SlowMotion(0.1f, 0.2f);
+                Demage();
                 leftHand.GetComponent<TrailRenderer>().emitting = true;
                 rightHand.GetComponent<TrailRenderer>().emitting = false;
                 break;
@@ -271,6 +283,7 @@ public class Player : MonoBehaviour
                 dashDistance = attack3DashDistance;
                 dashDuration = attack3DashDuration;
                 //SlowMotion(0.5f, 0.3f);
+                Demage();
                 leftHand.GetComponent<TrailRenderer>().emitting = false;
                 rightToe.GetComponent<TrailRenderer>().emitting = true;
                 break;
@@ -279,6 +292,7 @@ public class Player : MonoBehaviour
                 anim.SetTrigger("Attack4");
                 dashDistance = attack3DashDistance;
                 dashDuration = attack3DashDuration;
+                Demage();
                 DelayedSlowMotion(0.2f, 0.3f, 0.4f); // Slowmotion começa 0.2s depois
                 leftHand.GetComponent<TrailRenderer>().emitting = true;
                 rightToe.GetComponent<TrailRenderer>().emitting = true;
@@ -287,7 +301,7 @@ public class Player : MonoBehaviour
 
         if (dashDistance > 0 && dashDuration > 0)
         {
-            StartCoroutine(AttackDash(dashDistance, dashDuration));
+            //StartCoroutine(AttackDash(dashDistance, dashDuration));
         }
 
         comboTimer1 = 1f;
@@ -315,7 +329,7 @@ public class Player : MonoBehaviour
                 //CinemachineShake.Instance.ShakeCamera(5f, .1f);
                 //slowMo.TriggerSlowMotionTimed(0.3f, 5f, 1f); // 30% velocidade, suaviza com speed 5, dura 1 segundo
                 //SlowMotion(0.1f, 0.1f); // desacelera para 30% por 0.5s
-
+                Demage();
                 rightToe.GetComponent<TrailRenderer>().emitting = false;
                 rightHand.GetComponent<TrailRenderer>().emitting = true;
                 leftHand.GetComponent<TrailRenderer>().emitting = true;
@@ -327,6 +341,7 @@ public class Player : MonoBehaviour
                 dashDuration = attack2DashDuration;
                 anim.SetTrigger("c2Attack2");
                 //SlowMotion(0.1f, 0.2f);
+                Demage();
                 leftHand.GetComponent<TrailRenderer>().emitting = true;
                 rightHand.GetComponent<TrailRenderer>().emitting = false;
                 break;
@@ -345,6 +360,7 @@ public class Player : MonoBehaviour
                 anim.SetTrigger("c2Attack4");
                 dashDistance = attack3DashDistance;
                 dashDuration = attack3DashDuration;
+                Demage();
                 DelayedSlowMotion(0.2f, 0.3f, 0.4f); // Slowmotion começa 0.2s depois
                 leftHand.GetComponent<TrailRenderer>().emitting = true;
                 rightToe.GetComponent<TrailRenderer>().emitting = true;
@@ -353,7 +369,7 @@ public class Player : MonoBehaviour
 
         if (dashDistance > 0 && dashDuration > 0)
         {
-            StartCoroutine(AttackDash(dashDistance, dashDuration));
+            //StartCoroutine(AttackDash(dashDistance, dashDuration));
         }
 
         comboTimer2 = 6f;
@@ -499,6 +515,24 @@ public class Player : MonoBehaviour
 
         Time.timeScale = 1f;
         Time.fixedDeltaTime = 0.02f;
+    }
+
+    void Demage()
+    {
+        Collider[] hitColliders = Physics.OverlapSphere(areaTransform.position, attackRadius, enemylayer);
+
+        Debug.Log("attack demage");
+
+        foreach (Collider collider in hitColliders)
+        {
+
+            Enemy enemy = collider.GetComponent<Enemy>();
+            if (enemy != null) 
+            {
+                Debug.Log("attack enemy");
+                enemy.TakeDemage(attackDemage);
+            }
+        }
     }
 
 }
