@@ -5,18 +5,58 @@ public class Enemy : MonoBehaviour
 {
     private Animator anim;
     public float health = 100f;
-    private float deathAnimationTime = 5f; // Tempo da animação de morte
-    private float blinkStartDelay = 3f;    // Tempo para esperar antes de começar o pisca-pisca
-    private float blinkDuration = 1f;      // Duração do pisca-pisca
+    private float deathAnimationTime = 5f; // Tempo da animaï¿½ï¿½o de morte
+    private float blinkStartDelay = 3f;    // Tempo para esperar antes de comeï¿½ar o pisca-pisca
+    private float blinkDuration = 1f;      // Duraï¿½ï¿½o do pisca-pisca
     private float blinkInterval = 0.1f;    // Intervalo entre piscadas
+    public float attackRange = 2f;
+    private UnityEngine.AI.NavMeshAgent agent;
+
+    private GameObject player;
 
     private bool isDead = false;
 
 
     void Start()
     {
-        anim = GetComponent<Animator>();
-    }   
+        player = GameObject.Find("Player");
+
+        agent = GetComponentInParent<UnityEngine.AI.NavMeshAgent>();
+        anim = GetComponentInParent<Animator>();
+        if (anim == null)
+        {
+            Debug.LogWarning("Animator nï¿½o encontrado no pai!");
+        }
+    }
+
+    void Update()
+    {
+        if (player == null) return;
+
+        Transform playerTransform = player.transform;
+        float distance = Vector3.Distance(transform.position, playerTransform.position);
+
+        if (distance > attackRange)
+        {
+            // Seguir o player
+            agent.destination = playerTransform.position;
+            //animator.SetBool("isWalking", true);
+            //animator.SetBool("isAttacking", false);
+        }
+        else
+        {
+            // Atacar o player
+            agent.ResetPath(); // Parar o movimento
+                               // animator.SetBool("isWalking", false);
+                               // animator.SetBool("isAttacking", true);
+
+            // Olhar para o player
+            Vector3 lookDirection = (playerTransform.position - transform.position).normalized;
+            lookDirection.y = 0;
+            transform.forward = lookDirection;
+        }
+
+    }
 
     public void TakeDemage(float demage)
     {
@@ -31,12 +71,6 @@ public class Enemy : MonoBehaviour
             anim.SetTrigger("Demage");
 
         }
-
-
-
-
-
-
     }
 
     public void Die()
@@ -69,9 +103,10 @@ public class Enemy : MonoBehaviour
         }
 
         if (renderer != null)
-            renderer.enabled = true; // Garante que fique visível antes de sumir
+            renderer.enabled = true; // Garante que fique visï¿½vel antes de sumir
 
-        Destroy(gameObject);
+        Destroy(transform.root.gameObject); // destrï¿½i o topo da hierarquia (a "famï¿½lia inteira")
+
     }
 
 }
