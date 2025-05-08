@@ -40,13 +40,15 @@ public class Enemy : MonoBehaviour
         {
             // Seguir o player
             agent.destination = playerTransform.position;
-            //animator.SetBool("isWalking", true);
+            anim.SetTrigger("Walk");
             //animator.SetBool("isAttacking", false);
         }
         else
         {
             // Atacar o player
-            agent.ResetPath(); // Parar o movimento
+            agent.ResetPath();
+            anim.SetTrigger("Attack");
+            // Parar o movimento
                                // animator.SetBool("isWalking", false);
                                // animator.SetBool("isAttacking", true);
 
