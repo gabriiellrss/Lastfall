@@ -2,8 +2,6 @@
 using System.Collections;
 using UnityEngine.InputSystem;
 
-
-
 public class Player : MonoBehaviour
 {
     private CharacterController controller;
@@ -70,11 +68,17 @@ public class Player : MonoBehaviour
     public float attack3DashDistance = 2.0f;
     public float attack3DashDuration = 0.1f;
 
+    public int maxHealth = 100;
+    private int currentHealth;
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
         anim = GetComponent<Animator>();
         slowMo = GetComponent<SlowMotionHandler>();
+        currentHealth = maxHealth;
+
+
 
 
         if (cameraTransform == null)
@@ -533,6 +537,33 @@ public class Player : MonoBehaviour
                 enemy.TakeDemage(attackDemage);
             }
         }
+
+    }
+    // Chame isso quando o jogador receber dano
+    public void TakeDamage(int amount)
+    {
+        currentHealth -= amount;
+        Debug.Log("Vida atual: " + currentHealth);
+
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
     }
 
+    // Chame isso para curar o jogador
+    public void Heal(int amount)
+    {
+        currentHealth += amount;
+        if (currentHealth > maxHealth)
+            currentHealth = maxHealth;
+    }
+
+    void Die()
+    {
+        Debug.Log("Jogador morreu.");
+        // Aqui você pode desativar o jogador, tocar uma animação, etc.
+        DestroyObject;
+    }
 }
+

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using Unity.VisualScripting;
 
 public class Enemy : MonoBehaviour
 {
@@ -21,6 +22,7 @@ public class Enemy : MonoBehaviour
 
     public Transform attackPoint;
     public LayerMask playerLayer;
+    public int bosta = 8;
 
     void Start()
     {
@@ -69,7 +71,7 @@ public class Enemy : MonoBehaviour
                 {
                     isAttacking = true;
                     anim.SetTrigger("Attack");
-                    //Attack();
+                    Attack();
                     yield return new WaitForSeconds(attackCooldown);
                     isAttacking = false;
                 }
@@ -82,16 +84,23 @@ public class Enemy : MonoBehaviour
     {
         if (attackPoint == null) return;
 
-        /*Collider[] hitPlayers = Physics.OverlapSphere(attackPoint.position, attackRange, playerLayer);
+        Collider[] hitPlayers = Physics.OverlapSphere(attackPoint.position, attackRange, playerLayer);
         foreach (Collider hit in hitPlayers)
         {
-            PlayerHealth ph = hit.GetComponent<PlayerHealth>();
-            if (ph != null)
+            Player player = hit.GetComponentInParent<Player>(); // <-- Aqui o ajuste
+
+            if (player != null)
             {
-                ph.TakeDamage(attackDamage);
+                Debug.Log("O player foi atingido viado");
+                player.TakeDamage(bosta);
             }
-        }*/
+            else
+            {
+                Debug.LogWarning("Collider detectado, mas sem componente Player");
+            }
+        }
     }
+
 
     public void TakeDemage(float demage)
     {
