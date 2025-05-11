@@ -563,7 +563,7 @@ public class Player : MonoBehaviour
     {
         Debug.Log("Jogador morreu.");
         // Aqui você pode desativar o jogador, tocar uma animação, etc.
-        DestroyObject;
+        Destroy(gameObject);
     }
 }
 
