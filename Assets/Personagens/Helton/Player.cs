@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
+
 
 public class Player : MonoBehaviour
 {
@@ -68,6 +70,8 @@ public class Player : MonoBehaviour
     public float attack3DashDistance = 2.0f;
     public float attack3DashDuration = 0.1f;
 
+    [SerializeField] private Image barHealth;
+
     public int maxHealth = 100;
     private int currentHealth;
 
@@ -78,13 +82,17 @@ public class Player : MonoBehaviour
         slowMo = GetComponent<SlowMotionHandler>();
         currentHealth = maxHealth;
 
-
-
+        editBarHealth(currentHealth, maxHealth);
 
         if (cameraTransform == null)
         {
             cameraTransform = Camera.main.transform;
         }
+    }
+
+    public void editBarHealth(float vidaAtual, float vidaMaxima)
+    {
+        barHealth.fillAmount = (float)vidaAtual / vidaMaxima;
     }
 
     void Update()
@@ -524,6 +532,8 @@ public class Player : MonoBehaviour
     void Demage()
     {
         Collider[] hitColliders = Physics.OverlapSphere(areaTransform.position, attackRadius, enemylayer);
+        Instantiate(attackEffectPrefab, effectSpawnPoint.position, Quaternion.identity);
+
 
         Debug.Log("attack demage");
 
