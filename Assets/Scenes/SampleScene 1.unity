@@ -330,7 +330,6 @@ MonoBehaviour:
   attack2DashDuration: 0.1
   attack3DashDistance: 2
   attack3DashDuration: 0.1
-  maxHealth: 100
 --- !u!65 &81553150
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -865,27 +864,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf57aaa7308249f43bcc3119bcab46db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  agent: {fileID: 0}
-  player: {fileID: 0}
+  health: 100
+  attackRange: 2
+  attackDamage: 10
+  attackCooldown: 2
+  attackPoint: {fileID: 0}
   playerLayer:
     serializedVersion: 2
     m_Bits: 0
-  obstacleLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  patrolPoints: []
-  patrolSpeed: 3.5
-  patrolWaitTime: 2
-  visionRadius: 10
-  visionAngle: 90
-  chaseSpeed: 5
-  chaseDistance: 15
-  attackRange: 2
-  searchTime: 5
-  maxHealth: 100
-  respawnPoints: []
-  respawnDelay: 5
-  currentState: 0
 --- !u!65 &420829555
 BoxCollider:
   m_ObjectHideFlags: 0

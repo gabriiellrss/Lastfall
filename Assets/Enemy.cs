@@ -4,8 +4,7 @@
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
-using System.Collections.Generic;
-using UnityEngine.UI; // Necessário para List<T>
+using System.Collections.Generic; // Necessário para List<T>
 
 public class Enemy : MonoBehaviour
 {
@@ -44,11 +43,7 @@ public class Enemy : MonoBehaviour
     public float respawnDelay = 5f;
     private bool isDead = false;
 
-    [SerializeField] private Image barHealth;
-
     private Animator animator;
-
-    public GameObject mutantObject;
 
     // Estados da IA
     public enum AIState { Patrolling, Chasing, Searching, Attacking, Dead }
@@ -235,8 +230,6 @@ public class Enemy : MonoBehaviour
 
         animator.SetTrigger("Damage"); // animação de levar dano
 
-        editBarHealth(currentHealth, maxHealth);
-
         if (currentHealth <= 0)
         {
             Die();
@@ -261,7 +254,6 @@ public class Enemy : MonoBehaviour
         // Se tiver outros scripts que precisam ser desabilitados:
         // GetComponent<OutroScript>().enabled = false;
 
-        Destroy(mutantObject);
         StartCoroutine(Respawn());
     }
 
@@ -338,9 +330,5 @@ public class Enemy : MonoBehaviour
             }
         }
     }
-
-    public void editBarHealth(float vidaAtual, float vidaMaxima)
-    {
-        barHealth.fillAmount = (float) vidaAtual / vidaMaxima;
-    }
 }
+

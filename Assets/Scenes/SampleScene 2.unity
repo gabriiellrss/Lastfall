@@ -899,27 +899,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf57aaa7308249f43bcc3119bcab46db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  agent: {fileID: 0}
-  player: {fileID: 0}
+  health: 100
+  attackRange: 2
+  attackDamage: 10
+  attackCooldown: 2
+  attackPoint: {fileID: 1460525739}
   playerLayer:
     serializedVersion: 2
     m_Bits: 128
-  obstacleLayer:
-    serializedVersion: 2
-    m_Bits: 0
-  patrolPoints: []
-  patrolSpeed: 3.5
-  patrolWaitTime: 2
-  visionRadius: 10
-  visionAngle: 90
-  chaseSpeed: 5
-  chaseDistance: 15
-  attackRange: 2
-  searchTime: 5
-  maxHealth: 100
-  respawnPoints: []
-  respawnDelay: 5
-  currentState: 0
+  bosta: 8
 --- !u!65 &420829555
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1594,6 +1582,11 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!4 &1460525739 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -1293157592579415587, guid: 3ef9d98a8e08a5847ab9f8153f79de25, type: 3}
+  m_PrefabInstance: {fileID: 1531825240}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1531825240
 PrefabInstance:
   m_ObjectHideFlags: 0
