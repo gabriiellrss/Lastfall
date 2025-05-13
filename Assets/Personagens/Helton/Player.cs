@@ -534,6 +534,28 @@ public class Player : MonoBehaviour
         Collider[] hitColliders = Physics.OverlapSphere(areaTransform.position, attackRadius, enemylayer);
         //Instantiate(attackEffectPrefab, effectSpawnPoint.position, Quaternion.identity);
 
+        if (attackEffectPrefab != null && effectSpawnPoint != null)
+        {
+            // Instancia o efeito no ponto de spawn e com a rotação da câmera do jogador
+            // A rotação da câmera (cameraTransform.rotation) garante que o "forward" do efeito
+            // esteja alinhado com a direção para onde o jogador está olhando.
+            GameObject effectInstance = Instantiate(attackEffectPrefab, effectSpawnPoint.position, cameraTransform.rotation);
+
+            // Opcional: Destruir o efeito após um certo tempo para não poluir a cena
+            // Destroy(effectInstance, 3f); // Destroi o efeito após 3 segundos (ajuste o tempo)
+        }
+        else
+        {
+            if (attackEffectPrefab == null)
+            {
+                Debug.LogWarning("Attack Effect Prefab não está atribuído no Player.");
+            }
+            if (effectSpawnPoint == null)
+            {
+                Debug.LogWarning("Effect Spawn Point não está atribuído no Player.");
+            }
+        }
+
 
         Debug.Log("attack demage");
 
