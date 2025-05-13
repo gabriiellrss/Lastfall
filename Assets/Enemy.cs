@@ -261,10 +261,19 @@ public class Enemy : MonoBehaviour
         // Se tiver outros scripts que precisam ser desabilitados:
         // GetComponent<OutroScript>().enabled = false;
 
-        Destroy(mutantObject);
-        StartCoroutine(Respawn());
-    }
+        
 
+        //Destroy(mutantObject);
+        StartCoroutine(EsperarEDestruir(mutantObject));
+        
+    }
+IEnumerator EsperarEDestruir(GameObject MutantObject)
+        {
+            yield return new
+                WaitForSeconds(4f);
+            Destroy(MutantObject); 
+        }
+    
     IEnumerator Respawn()
     {
         yield return new WaitForSeconds(respawnDelay);
