@@ -532,7 +532,7 @@ public class Player : MonoBehaviour
     void Demage()
     {
         Collider[] hitColliders = Physics.OverlapSphere(areaTransform.position, attackRadius, enemylayer);
-        Instantiate(attackEffectPrefab, effectSpawnPoint.position, Quaternion.identity);
+        //Instantiate(attackEffectPrefab, effectSpawnPoint.position, Quaternion.identity);
 
 
         Debug.Log("attack demage");

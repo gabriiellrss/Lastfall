@@ -822,6 +822,10 @@ PrefabInstance:
       propertyPath: cameraTransform
       value: 
       objectReference: {fileID: 330585546}
+    - target: {fileID: 7690895624435151425, guid: 33efef444a2efee41a85f005fc50d5ab, type: 3}
+      propertyPath: attackEffectPrefab
+      value: 
+      objectReference: {fileID: 100002, guid: a590c04abd57be544b50a1b51a6674ac, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

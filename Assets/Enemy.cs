@@ -267,12 +267,12 @@ public class Enemy : MonoBehaviour
         StartCoroutine(EsperarEDestruir(mutantObject));
         
     }
-IEnumerator EsperarEDestruir(GameObject MutantObject)
-        {
-            yield return new
-                WaitForSeconds(4f);
-            Destroy(MutantObject); 
-        }
+    IEnumerator EsperarEDestruir(GameObject MutantObject)
+    {
+        yield return new
+            WaitForSeconds(4f);
+        Destroy(MutantObject); 
+    }
     
     IEnumerator Respawn()
     {
