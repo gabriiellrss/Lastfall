@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &5119764130394275386
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.73693323
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -1.2412204
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.38440934
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.1339229
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0.5125225
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.085589245
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0.8438364
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 2.14
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: -49.37
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749019867078, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7658220749020036070, guid: d32892c82a841e34bb692140d685dcfc, type: 3}
+      propertyPath: m_Name
+      value: SciFiGunLight_Black Variant
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: d32892c82a841e34bb692140d685dcfc, type: 3}

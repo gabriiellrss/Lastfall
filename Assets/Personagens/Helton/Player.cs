@@ -70,6 +70,8 @@ public class Player : MonoBehaviour
     public float attack3DashDistance = 2.0f;
     public float attack3DashDuration = 0.1f;
 
+    public float timeFireball = 2f;
+
     [SerializeField] private Image barHealth;
 
     public int maxHealth = 100;
@@ -129,8 +131,6 @@ public class Player : MonoBehaviour
 
         if (!isAttacking)
         {
-            rightHand.GetComponent<TrailRenderer>().emitting = false;
-            leftHand.GetComponent<TrailRenderer>().emitting = false;
             horizontalInput = Input.GetAxis("Horizontal");
             verticalInput = Input.GetAxis("Vertical");
             isMoving = horizontalInput != 0 || verticalInput != 0;
@@ -245,10 +245,40 @@ public class Player : MonoBehaviour
 
         if (Input.GetButtonDown("Fire1"))
         {
-            if (!isAttacking && attackTimer <= 0) Attack2();
-            else bufferedAttack2 = true;
+            Fireball();
+            //if (!isAttacking && attackTimer <= 0) Attack2();
+            //else bufferedAttack2 = true;
         }
     }
+
+    void Fireball()
+    {
+
+        anim.SetTrigger("Fireball");
+        StartCoroutine(EsperarAnim(timeFireball));
+    }
+
+    IEnumerator EsperarAnim(float time)
+    {
+        yield return new WaitForSeconds(time);
+        Instantiate(attackEffectPrefab, effectSpawnPoint.position, effectSpawnPoint.rotation);
+        
+    }
+
+    void SetTrailRenderer(GameObject obj, bool isActive, Color startColor, Color endColor, float startWidth, float endWidth)
+    {
+        TrailRenderer trail = obj.GetComponent<TrailRenderer>();
+        if (trail != null)
+        {
+            trail.emitting = isActive;
+            trail.startColor = startColor;
+            trail.endColor = endColor;
+            trail.startWidth = startWidth;
+            trail.endWidth = endWidth;
+        }
+    }
+
+
 
     void Attack()
     {
@@ -532,29 +562,11 @@ public class Player : MonoBehaviour
     void Demage()
     {
         Collider[] hitColliders = Physics.OverlapSphere(areaTransform.position, attackRadius, enemylayer);
-        //Instantiate(attackEffectPrefab, effectSpawnPoint.position, Quaternion.identity);
+        //Instantiate(attackEffectPrefab, effectSpawnPoint.position, effectSpawnPoint.rotation);
+        //Vector3 directionToPlayer = (transform.position - effectSpawnPoint.position).normalized;
+       //Quaternion lookRotation = Quaternion.LookRotation(directionToPlayer);
 
-        if (attackEffectPrefab != null && effectSpawnPoint != null)
-        {
-            // Instancia o efeito no ponto de spawn e com a rotação da câmera do jogador
-            // A rotação da câmera (cameraTransform.rotation) garante que o "forward" do efeito
-            // esteja alinhado com a direção para onde o jogador está olhando.
-            GameObject effectInstance = Instantiate(attackEffectPrefab, effectSpawnPoint.position, cameraTransform.rotation);
-
-            // Opcional: Destruir o efeito após um certo tempo para não poluir a cena
-            // Destroy(effectInstance, 3f); // Destroi o efeito após 3 segundos (ajuste o tempo)
-        }
-        else
-        {
-            if (attackEffectPrefab == null)
-            {
-                Debug.LogWarning("Attack Effect Prefab não está atribuído no Player.");
-            }
-            if (effectSpawnPoint == null)
-            {
-                Debug.LogWarning("Effect Spawn Point não está atribuído no Player.");
-            }
-        }
+        //GameObject effectInstance = Instantiate(attackEffectPrefab, effectSpawnPoint.position, lookRotation);
 
 
         Debug.Log("attack demage");
