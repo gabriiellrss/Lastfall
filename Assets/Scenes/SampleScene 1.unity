@@ -330,7 +330,11 @@ MonoBehaviour:
   attack2DashDuration: 0.1
   attack3DashDistance: 2
   attack3DashDuration: 0.1
+  timeFireball: 2
+  barHealth: {fileID: 0}
   maxHealth: 100
+  gun: {fileID: 0}
+  weaponObject: {fileID: 0}
 --- !u!65 &81553150
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -885,6 +889,8 @@ MonoBehaviour:
   maxHealth: 100
   respawnPoints: []
   respawnDelay: 5
+  barHealth: {fileID: 0}
+  mutantObject: {fileID: 0}
   currentState: 0
 --- !u!65 &420829555
 BoxCollider:

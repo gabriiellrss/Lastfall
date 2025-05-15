@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
-using UnityEngine.InputSystem;
+using UnityEngine.InputSystem; // Esta linha pode não ser necessária se estiver a usar Input.GetKey/GetButtonDown
 using UnityEngine.UI;
 
 
@@ -77,6 +77,14 @@ public class Player : MonoBehaviour
     public int maxHealth = 100;
     private int currentHealth;
 
+    public Gun gun;
+
+    // Novas variáveis para o sistema de arma
+    [Header("Weapon System")]
+    public GameObject weaponObject; // Arraste o GameObject da sua arma aqui no Inspector
+    private bool isWeaponActive = false;
+    // A variável anim.GetBool("isShoot") pode ser usada para verificar o estado de "shoot"
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
@@ -90,6 +98,16 @@ public class Player : MonoBehaviour
         {
             cameraTransform = Camera.main.transform;
         }
+
+        // Garante que a arma comece desativada e o estado de tiro também
+        if (weaponObject != null)
+        {
+            weaponObject.SetActive(false);
+        }
+        if (anim != null) 
+        {
+            anim.SetBool("isShoot", false);
+        }
     }
 
     public void editBarHealth(float vidaAtual, float vidaMaxima)
@@ -100,22 +118,53 @@ public class Player : MonoBehaviour
     void Update()
     {
         Move();
-        HandleAttack();
-        HandleCombo();
+        HandleAttack(); // Considere se HandleAttack deve ser desabilitado quando isWeaponActive = true
+        HandleCombo();  // Considere se HandleCombo deve ser desabilitado quando isWeaponActive = true
         UpdateAnimation();
         pose();
+        HandleWeaponToggle(); // Lógica para ativar/desativar arma e modo de tiro
+        
+        // Se a arma estiver ativa (modo "isShoot"), você pode querer adicionar uma lógica de tiro aqui
+        // Ex: if (isWeaponActive && anim.GetBool("isShoot") && Input.GetButtonDown("Fire1")) { Shoot(); }
+    }
 
+    void HandleWeaponToggle()
+    {
+        // Usaremos a tecla "G" para alternar a arma como exemplo.
+        // Mude para o botão desejado (ex: Input.GetButtonDown("NomeDoSeuBotao")).
+        if (Input.GetKeyDown(KeyCode.G)) 
+        {
+            isWeaponActive = !isWeaponActive; // Alterna o estado da arma
+
+            if (weaponObject != null)
+            {
+                weaponObject.SetActive(isWeaponActive);
+            }
+
+            // Define o parâmetro "isShoot" no Animator.
+            // Se a arma está ativa, isShoot = true. Se desativada, isShoot = false.
+            if (anim != null) 
+            {
+                anim.SetBool("isShoot", isWeaponActive);
+            }
+
+            // Debug para verificar o estado
+            // Debug.Log("Weapon Active: " + isWeaponActive + ", isShoot Animator: " + (anim != null ? anim.GetBool("isShoot").ToString() : "Animator not found"));
+
+            // Se estiver a desativar a arma, pode ser necessário interromper outras ações
+            // relacionadas ao modo de tiro, se houver.
+        }
     }
 
     void pose()
     {
         if (Input.GetKey(KeyCode.I))
         {
-            anim.SetBool("isPose", true);
+            if (anim != null) anim.SetBool("isPose", true);
         }
         else
         {
-            anim.SetBool("isPose", false);
+            if (anim != null) anim.SetBool("isPose", false);
         }
     }
 
@@ -128,24 +177,31 @@ public class Player : MonoBehaviour
         float currentSpeed = 0f;
         Vector3 move = Vector3.zero;
 
-
-        if (!isAttacking)
+        if (!isAttacking) 
         {
             horizontalInput = Input.GetAxis("Horizontal");
             verticalInput = Input.GetAxis("Vertical");
             isMoving = horizontalInput != 0 || verticalInput != 0;
-            isRunning = isMoving && Input.GetKey(KeyCode.LeftShift) || Input.GetButton("Run");
+            isRunning = isMoving && (Input.GetKey(KeyCode.LeftShift) || Input.GetButton("Run"));
             currentSpeed = isRunning ? runSpeed : walkSpeed;
 
-            Vector3 forward = cameraTransform.forward;
-            Vector3 right = cameraTransform.right;
+            if (cameraTransform != null)
+            {
+                Vector3 forward = cameraTransform.forward;
+                Vector3 right = cameraTransform.right;
 
-            forward.y = 0;
-            right.y = 0;
-            forward.Normalize();
-            right.Normalize();
+                forward.y = 0;
+                right.y = 0;
+                forward.Normalize();
+                right.Normalize();
 
-            move = (forward * verticalInput + right * horizontalInput).normalized * currentSpeed;
+                move = (forward * verticalInput + right * horizontalInput).normalized * currentSpeed;
+            }
+            else
+            {
+                // Fallback ou aviso se cameraTransform não estiver definida
+                move = (new Vector3(horizontalInput, 0, verticalInput)).normalized * currentSpeed;
+            }
         }
 
         if (controller.isGrounded)
@@ -156,7 +212,7 @@ public class Player : MonoBehaviour
             verticalVelocity = -gravity * Time.deltaTime;
             canDoubleJump = true;
 
-            if (Input.GetButtonDown("Jump") && !isAttacking)
+            if (Input.GetButtonDown("Jump") && !isAttacking) 
             {
                 Jump();
             }
@@ -174,7 +230,10 @@ public class Player : MonoBehaviour
         }
 
         moveDirection = new Vector3(move.x, verticalVelocity, move.z);
-        controller.Move(moveDirection * Time.deltaTime);
+        if (controller != null && controller.enabled)
+        {
+            controller.Move(moveDirection * Time.deltaTime);
+        }
 
         if (isMoving && !isAttacking)
         {
@@ -191,13 +250,17 @@ public class Player : MonoBehaviour
     {
         if (anim == null) return;
 
-        Vector3 horizontalVelocity = new Vector3(controller.velocity.x, 0, controller.velocity.z);
+        Vector3 horizontalVelocity = Vector3.zero;
+        if (controller != null && controller.enabled) {
+            horizontalVelocity = new Vector3(controller.velocity.x, 0, controller.velocity.z);
+        }
         float currentHorizontalSpeed = horizontalVelocity.magnitude;
 
         float animatorSpeed = 0f;
+        
         if (!isAttacking)
         {
-            bool isRunning = Input.GetButton("Run");
+            bool isRunning = Input.GetButton("Run") || Input.GetKey(KeyCode.LeftShift); 
             if (currentHorizontalSpeed > 0.1f)
             {
                 animatorSpeed = isRunning ? 2f : 1f;
@@ -217,7 +280,7 @@ public class Player : MonoBehaviour
             verticalVelocity = jumpForce;
             canDoubleJump = true;
             noChao = false;
-            anim.SetTrigger("Pular");
+            if (anim != null) anim.SetTrigger("Pular");
         }
     }
 
@@ -227,46 +290,58 @@ public class Player : MonoBehaviour
         canDoubleJump = false;
         isJumping = true;
         noChao = false;
-        anim.SetTrigger("DoubleJump");
+        if (anim != null) anim.SetTrigger("DoubleJump");
     }
 
-    void HandleAttack()
+    void HandleAttack() 
     {
+        // Considere: if (isWeaponActive) return; 
+        
         if (attackTimer > 0)
         {
             attackTimer -= Time.deltaTime;
         }
 
-        if (Input.GetButtonDown("Fire2"))
+        if (Input.GetButtonDown("Fire2")) 
         {
             if (!isAttacking && attackTimer <= 0) Attack();
             else bufferedAttack1 = true;
         }
 
-        if (Input.GetButtonDown("Fire1"))
+        if (Input.GetButton ("Fire1")) 
         {
-            Fireball();
-            //if (!isAttacking && attackTimer <= 0) Attack2();
-            //else bufferedAttack2 = true;
+            if (isWeaponActive && anim.GetBool("isShoot")) 
+            { /* Lógica de Tiro*/
+                anim.SetTrigger("fire");
+                gun.TryShoot();
+            } else 
+            { 
+                Fireball(); 
+            }
         }
     }
 
     void Fireball()
     {
-
-        anim.SetTrigger("Fireball");
-        StartCoroutine(EsperarAnim(timeFireball));
+        if (anim != null) anim.SetTrigger("Fireball");
+        if (attackEffectPrefab != null && effectSpawnPoint != null) 
+        {
+            StartCoroutine(EsperarAnim(timeFireball));
+        }
     }
 
     IEnumerator EsperarAnim(float time)
     {
         yield return new WaitForSeconds(time);
-        Instantiate(attackEffectPrefab, effectSpawnPoint.position, effectSpawnPoint.rotation);
-        
+        if (attackEffectPrefab != null && effectSpawnPoint != null) 
+        {
+            Instantiate(attackEffectPrefab, effectSpawnPoint.position, effectSpawnPoint.rotation);
+        }
     }
 
     void SetTrailRenderer(GameObject obj, bool isActive, Color startColor, Color endColor, float startWidth, float endWidth)
     {
+        if (obj == null) return;
         TrailRenderer trail = obj.GetComponent<TrailRenderer>();
         if (trail != null)
         {
@@ -278,66 +353,58 @@ public class Player : MonoBehaviour
         }
     }
 
-
-
-    void Attack()
+    void Attack() 
     {
         isAttacking = true;
-        anim.SetBool("isAttacking", true); // <-- Aqui ativamos
+        if (anim != null) anim.SetBool("isAttacking", true); 
 
         attackTimer = attackCooldown;
 
-        int attackAnimID = attack1AnimID;
+        int attackAnimIDToPlay = attack1AnimID;
         float dashDistance = 0f;
         float dashDuration = 0f;
 
         switch (currentCombo1)
         {
             case 0:
-                attackAnimID = attack1AnimID;
+                attackAnimIDToPlay = attack1AnimID;
                 dashDistance = attack1DashDistance;
-                dashDuration = attack2DashDuration;
-                anim.SetTrigger("Attack1");
-                //CinemachineShake.Instance.ShakeCamera(5f, .1f);
-                //slowMo.TriggerSlowMotionTimed(0.3f, 5f, 1f); // 30% velocidade, suaviza com speed 5, dura 1 segundo
-                //SlowMotion(0.1f, 0.1f); // desacelera para 30% por 0.5s
-
+                // dashDuration = attack2DashDuration; // Parece que esta linha não é usada para o Attack1
+                if (anim != null) anim.SetTrigger("Attack1");
                 Demage();
-                rightToe.GetComponent<TrailRenderer>().emitting = false;
-                rightHand.GetComponent<TrailRenderer>().emitting = true;
-                leftHand.GetComponent<TrailRenderer>().emitting = false;
+                SetTrailRenderer(rightToe, false, Color.white, Color.white, 0.1f, 0f); // Exemplo de cores e larguras
+                SetTrailRenderer(rightHand, true, Color.red, Color.yellow, 0.2f, 0f);
+                SetTrailRenderer(leftHand, false, Color.white, Color.white, 0.1f, 0f);
                 break;
 
             case 1:
-                attackAnimID = attack2AnimID;
+                attackAnimIDToPlay = attack2AnimID;
                 dashDistance = attack2DashDistance;
                 dashDuration = attack2DashDuration;
-                anim.SetTrigger("Attack2");
-                //SlowMotion(0.1f, 0.2f);
+                if (anim != null) anim.SetTrigger("Attack2");
                 Demage();
-                leftHand.GetComponent<TrailRenderer>().emitting = true;
-                rightHand.GetComponent<TrailRenderer>().emitting = false;
+                SetTrailRenderer(leftHand, true, Color.blue, Color.cyan, 0.2f, 0f);
+                SetTrailRenderer(rightHand, false, Color.white, Color.white, 0.1f, 0f);
                 break;
 
             case 2:
-                attackAnimID = attack3AnimID;
-                anim.SetTrigger("Attack3");
+                attackAnimIDToPlay = attack3AnimID;
+                if (anim != null) anim.SetTrigger("Attack3");
                 dashDistance = attack3DashDistance;
                 dashDuration = attack3DashDuration;
-                //SlowMotion(0.5f, 0.3f);
                 Demage();
-                leftHand.GetComponent<TrailRenderer>().emitting = false;
-                rightToe.GetComponent<TrailRenderer>().emitting = true;
+                SetTrailRenderer(leftHand, false, Color.white, Color.white, 0.1f, 0f);
+                SetTrailRenderer(rightToe, true, Color.green, Color.cyan, 0.2f, 0f);
                 break;
             case 3:
-                attackAnimID = attack4AnimID;
-                anim.SetTrigger("Attack4");
-                dashDistance = attack3DashDistance;
-                dashDuration = attack3DashDuration;
+                attackAnimIDToPlay = attack4AnimID;
+                if (anim != null) anim.SetTrigger("Attack4");
+                dashDistance = attack3DashDistance; // Reutiliza attack3DashDistance
+                dashDuration = attack3DashDuration; // Reutiliza attack3DashDuration
                 Demage();
-                DelayedSlowMotion(0.2f, 0.3f, 0.4f); // Slowmotion começa 0.2s depois
-                leftHand.GetComponent<TrailRenderer>().emitting = true;
-                rightToe.GetComponent<TrailRenderer>().emitting = true;
+                // DelayedSlowMotion(0.2f, 0.3f, 0.4f); 
+                SetTrailRenderer(leftHand, true, Color.magenta, Color.cyan, 0.2f, 0f);
+                SetTrailRenderer(rightToe, true, Color.green, Color.cyan, 0.2f, 0f);
                 break;
         }
 
@@ -346,67 +413,44 @@ public class Player : MonoBehaviour
             //StartCoroutine(AttackDash(dashDistance, dashDuration));
         }
 
-        comboTimer1 = 1f;
-        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimID), true)); // true = combo1
+        comboTimer1 = 1f; 
+        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimIDToPlay), true)); 
     }
 
-    void Attack2()
+    void Attack2() 
     {
         isAttacking = true;
-        anim.SetBool("isAttacking", true); // <-- Aqui ativamos
+        if (anim != null) anim.SetBool("isAttacking", true); 
 
         attackTimer = attackCooldown;
 
-        int attackAnimID = attack1AnimID;
+        int attackAnimIDToPlay = attack5AnimID; // Usar IDs corretos para combo2
         float dashDistance = 0f;
         float dashDuration = 0f;
 
         switch (currentCombo2)
         {
             case 0:
-                attackAnimID = 5;
+                attackAnimIDToPlay = attack5AnimID; // Ex: c2Attack1
                 dashDistance = attack1DashDistance;
-                dashDuration = attack2DashDuration;
-                anim.SetTrigger("c2Attack1");
-                //CinemachineShake.Instance.ShakeCamera(5f, .1f);
-                //slowMo.TriggerSlowMotionTimed(0.3f, 5f, 1f); // 30% velocidade, suaviza com speed 5, dura 1 segundo
-                //SlowMotion(0.1f, 0.1f); // desacelera para 30% por 0.5s
+                // dashDuration = attack2DashDuration;
+                if (anim != null) anim.SetTrigger("c2Attack1");
                 Demage();
-                rightToe.GetComponent<TrailRenderer>().emitting = false;
-                rightHand.GetComponent<TrailRenderer>().emitting = true;
-                leftHand.GetComponent<TrailRenderer>().emitting = true;
+                SetTrailRenderer(rightToe, false, Color.white, Color.white, 0.1f, 0f);
+                SetTrailRenderer(rightHand, true, Color.red, Color.yellow, 0.2f, 0f);
+                SetTrailRenderer(leftHand, true, Color.blue, Color.cyan, 0.2f, 0f);
                 break;
 
             case 1:
-                attackAnimID = 6;
+                attackAnimIDToPlay = attack6AnimID; // Ex: c2Attack2
                 dashDistance = attack2DashDistance;
                 dashDuration = attack2DashDuration;
-                anim.SetTrigger("c2Attack2");
-                //SlowMotion(0.1f, 0.2f);
+                if (anim != null) anim.SetTrigger("c2Attack2");
                 Demage();
-                leftHand.GetComponent<TrailRenderer>().emitting = true;
-                rightHand.GetComponent<TrailRenderer>().emitting = false;
+                SetTrailRenderer(leftHand, true, Color.blue, Color.cyan, 0.2f, 0f);
+                SetTrailRenderer(rightHand, false, Color.white, Color.white, 0.1f, 0f);
                 break;
-
-            case 2:
-                attackAnimID = 7;
-                anim.SetTrigger("c2Attack3");
-                dashDistance = attack3DashDistance;
-                dashDuration = attack3DashDuration;
-                //SlowMotion(0.5f, 0.3f);
-                leftHand.GetComponent<TrailRenderer>().emitting = false;
-                rightToe.GetComponent<TrailRenderer>().emitting = true;
-                break;
-            case 3:
-                attackAnimID = 8;
-                anim.SetTrigger("c2Attack4");
-                dashDistance = attack3DashDistance;
-                dashDuration = attack3DashDuration;
-                Demage();
-                DelayedSlowMotion(0.2f, 0.3f, 0.4f); // Slowmotion começa 0.2s depois
-                leftHand.GetComponent<TrailRenderer>().emitting = true;
-                rightToe.GetComponent<TrailRenderer>().emitting = true;
-                break;
+            // Adicione case 2 e 3 para c2Attack3 e c2Attack4 se existirem no Animator e GetAnimationDuration
         }
 
         if (dashDistance > 0 && dashDuration > 0)
@@ -414,10 +458,29 @@ public class Player : MonoBehaviour
             //StartCoroutine(AttackDash(dashDistance, dashDuration));
         }
 
-        comboTimer2 = 6f;
-        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimID), false)); // true = combo1
+        comboTimer2 = 6f; 
+        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimIDToPlay), false)); 
+    }
+    
+    void Demage()
+    {
+        // Debug.Log("Damage Dealt (Placeholder)");
+        if (areaTransform == null || enemylayer == 0) return;
+        Collider[] hitEnemies = Physics.OverlapSphere(areaTransform.position, attackRadius, enemylayer);
+        foreach (Collider enemy in hitEnemies)
+        {
+            // Supondo que o inimigo tem um script com o método TakeDamage
+            // Ex: enemy.GetComponent<EnemyHealth>()?.TakeDamage(attackDemage);
+            Debug.Log("Hit: " + enemy.name);
+        }
     }
 
+    void DelayedSlowMotion(float delay, float duration, float scale)
+    {
+        // if (slowMo != null) slowMo.TriggerSlowMotionTimed(scale, duration, delay); // Ajuste os parâmetros conforme a API do seu SlowMotionHandler
+        Debug.Log("Delayed Slow Motion (Placeholder)");
+    }
+    
     float GetAnimationDuration(int attackID)
     {
         //combo 1
@@ -427,83 +490,71 @@ public class Player : MonoBehaviour
         if (attackID == attack4AnimID) return 0.7f;
 
         //combo2
-        if (attackID == 5) return 0.4f;
-        if (attackID == 6) return 0.6f;
-        if (attackID == 7) return 0.6f;
-        if (attackID == 8) return 0.7f;
-        return 0.4f;
+        if (attackID == attack5AnimID) return 0.4f; // c2Attack1
+        if (attackID == attack6AnimID) return 0.6f; // c2Attack2
+        // if (attackID == 7) return 0.6f; // c2Attack3 (attack7AnimID)
+        // if (attackID == 8) return 0.7f; // c2Attack4 (attack8AnimID)
+        return 0.4f; 
     }
 
     IEnumerator ResetAttackState(float animationDuration, bool isCombo1)
     {
-        // Adiciona delay extra dependendo do ataque atual
         int currentCombo = isCombo1 ? currentCombo1 : currentCombo2;
-
-        /*if (currentCombo == 2)
-            animationDuration += 0.1f;
-        else if (currentCombo == 3)
-            animationDuration += 0.5f;*/
 
         if(isCombo1 == true)
         {
-            // Se for o ataque 3, adiciona mais tempo antes de resetar
-            if (currentCombo == 2)
+            if (currentCombo == 2) // Attack3 do combo1
             {
-                animationDuration += 0.1f; // adiciona 0.5 segundos extras (ajuste como quiser)
+                animationDuration += 0.1f; 
             }
 
-            if (currentCombo == 3)
+            if (currentCombo == 3) // Attack4 do combo1
             {
-                animationDuration += 0.5f; // adiciona 0.5 segundos extras (ajuste como quiser)
+                animationDuration += 0.5f; 
             }
         }
+        // Adicionar lógica similar para isCombo2 se os ataques tiverem durações que precisam de ajuste
 
+        yield return new WaitForSeconds(animationDuration);
 
-            yield return new WaitForSeconds(animationDuration);
-
-        // Atualiza combo
         if (isCombo1)
         {
             if (comboTimer1 > 0)
-                currentCombo1 = (currentCombo1 + 1) % 4;
+                currentCombo1 = (currentCombo1 + 1) % 4; 
             else
                 currentCombo1 = 0;
         }
-        else
+        else 
         {
+            // Ajuste o módulo conforme o número de ataques no combo2 (ex: % 2 se só tiver c2Attack1 e c2Attack2 implementados)
+            int maxCombo2Attacks = 2; // Se tiver mais, aumente este número
             if (comboTimer2 > 0)
-                currentCombo2 = (currentCombo2 + 1) % 4;
+                currentCombo2 = (currentCombo2 + 1) % maxCombo2Attacks; 
             else
                 currentCombo2 = 0;
         }
 
-        // Verifica ataque em buffer
         if (isCombo1 && bufferedAttack1)
         {
             bufferedAttack1 = false;
-            Attack(); // Chama próximo ataque imediatamente
+            Attack(); 
         }
         else if (!isCombo1 && bufferedAttack2)
         {
             bufferedAttack2 = false;
-            Attack2(); // Chama próximo ataque imediatamente
+            Attack2(); 
         }
         else
         {
-            // Finaliza ataque se não há buffer
             isAttacking = false;
-            anim.SetBool("isAttacking", false);
-            Debug.Log("Estado de ataque resetado.");
-
-            // Reseta trails
-            //rightHand.GetComponent<TrailRenderer>().emitting = false;
-            //leftHand.GetComponent<TrailRenderer>().emitting = false;
-            //rightToe.GetComponent<TrailRenderer>().emitting = false;
+            if (anim != null) anim.SetBool("isAttacking", false);
+            // Debug.Log("Estado de ataque resetado.");
         }
     }
 
     IEnumerator AttackDash(float distance, float duration)
     {
+        if (controller == null || !controller.enabled) yield break;
         float elapsed = 0f;
         Vector3 dashDirection = transform.forward;
         float speed = distance / duration;
@@ -537,77 +588,6 @@ public class Player : MonoBehaviour
                 currentCombo2 = 0;
             }
         }
-    }
-
-
-    // SlowMotion com atraso
-    void DelayedSlowMotion(float delay, float slowAmount, float duration)
-    {
-        StartCoroutine(DoDelayedSlowMotion(delay, slowAmount, duration));
-    }
-
-    private IEnumerator DoDelayedSlowMotion(float delay, float slowAmount, float duration)
-    {
-        yield return new WaitForSecondsRealtime(delay); // espera antes de iniciar o slow
-
-        Time.timeScale = slowAmount;
-        Time.fixedDeltaTime = 0.02f * Time.timeScale;
-
-        yield return new WaitForSecondsRealtime(duration); // dura o tempo necessário
-
-        Time.timeScale = 1f;
-        Time.fixedDeltaTime = 0.02f;
-    }
-
-    void Demage()
-    {
-        Collider[] hitColliders = Physics.OverlapSphere(areaTransform.position, attackRadius, enemylayer);
-        //Instantiate(attackEffectPrefab, effectSpawnPoint.position, effectSpawnPoint.rotation);
-        //Vector3 directionToPlayer = (transform.position - effectSpawnPoint.position).normalized;
-       //Quaternion lookRotation = Quaternion.LookRotation(directionToPlayer);
-
-        //GameObject effectInstance = Instantiate(attackEffectPrefab, effectSpawnPoint.position, lookRotation);
-
-
-        Debug.Log("attack demage");
-
-        foreach (Collider collider in hitColliders)
-        {
-
-            Enemy enemy = collider.GetComponent<Enemy>();
-            if (enemy != null) 
-            {
-                Debug.Log("attack enemy");
-                enemy.TakeDemage(attackDemage);
-            }
-        }
-
-    }
-    // Chame isso quando o jogador receber dano
-    public void TakeDamage(int amount)
-    {
-        currentHealth -= amount;
-        Debug.Log("Vida atual: " + currentHealth);
-
-        if (currentHealth <= 0)
-        {
-            Die();
-        }
-    }
-
-    // Chame isso para curar o jogador
-    public void Heal(int amount)
-    {
-        currentHealth += amount;
-        if (currentHealth > maxHealth)
-            currentHealth = maxHealth;
-    }
-
-    void Die()
-    {
-        Debug.Log("Jogador morreu.");
-        // Aqui você pode desativar o jogador, tocar uma animação, etc.
-        Destroy(gameObject);
     }
 }
 
