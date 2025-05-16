@@ -1,15 +1,6 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using TMPro;
 
-/// Thanks for downloading my projectile gun script! :D
-/// Feel free to use it in any project you like!
-/// 
-/// The code is fully commented but if you still have any questions
-/// don't hesitate to write a yt comment
-/// or use the #coding-problems channel of my discord server
-/// 
-/// Dave
 public class Gun : MonoBehaviour
 {
     //bullet 
@@ -26,18 +17,19 @@ public class Gun : MonoBehaviour
     int bulletsLeft, bulletsShot;
 
     //Recoil
-    public Rigidbody playerRb;
+    public Rigidbody playerRb; // Considerar se ainda é necessário se o tiro é sempre para a frente do jogador
     public float recoilForce;
 
     //bools
     bool shooting, readyToShoot, reloading;
 
     //Reference
-    public Camera fpsCam;
-    public Transform attackPoint;
+    // public Camera fpsCam; // Comentado/Removido: Não será usado para a direção do tiro base
+    public Transform attackPoint; // Ponto de onde o projétil é disparado e que define a direção frontal
 
     //Graphics
-    public GameObject muzzleFlash;
+    public GameObject muzzleFlash; // Prefab do efeito de muzzle flash
+    public float muzzleFlashDuration = 0.1f; // Duração do efeito de muzzle flash
     public TextMeshProUGUI ammunitionDisplay;
 
     //bug fixing :D
@@ -52,79 +44,79 @@ public class Gun : MonoBehaviour
 
     public void TryShoot()
     {
+        // Chamado pelo Player.cs
+        // Verifica se pode disparar (pronto, não a recarregar, com balas)
         if (readyToShoot && !reloading && bulletsLeft > 0)
         {
-            bulletsShot = 0;
+            bulletsShot = 0; // Reseta a contagem de balas por rajada
             Shoot();
+        }
+        // Se tentar disparar sem balas e não estiver a recarregar, inicia o reload automaticamente
+        else if (readyToShoot && !reloading && bulletsLeft <= 0)
+        {
+            Reload();
         }
     }
 
     private void Update()
     {
-        /*MyInput();*/
+        // A lógica de input foi movida para Player.cs para melhor controlo centralizado
+        // MyInput(); 
 
         //Set ammo display, if it exists :D
         if (ammunitionDisplay != null)
             ammunitionDisplay.SetText(bulletsLeft / bulletsPerTap + " / " + magazineSize / bulletsPerTap);
-    }
-    private void MyInput()
-    {
-        //Check if allowed to hold down button and take corresponding input
-        if (allowButtonHold) shooting = Input.GetKey(KeyCode.Mouse0);
-        else shooting = Input.GetKeyDown(KeyCode.Mouse0);
 
-        //Reloading 
-        if (Input.GetKeyDown(KeyCode.R) && bulletsLeft < magazineSize && !reloading) Reload();
-        //Reload automatically when trying to shoot without ammo
-        if (readyToShoot && shooting && !reloading && bulletsLeft <= 0) Reload();
-
-        //Shooting
-        if (readyToShoot && shooting && !reloading && bulletsLeft > 0)
+        // Recarregar com a tecla R (pode ser mantido aqui ou movido para Player.cs se preferir centralizar inputs)
+        if (Input.GetKeyDown(KeyCode.R) && bulletsLeft < magazineSize && !reloading)
         {
-            //Set bullets shot to 0
-            bulletsShot = 0;
-
-            Shoot();
+            Reload();
         }
     }
+
+    // MyInput() foi removido pois o Player.cs agora chama TryShoot()
+    // private void MyInput()
+    // {
+    //     // ...
+    // }
 
     private void Shoot()
     {
         readyToShoot = false;
 
-        //Find the exact hit position using a raycast
-        Ray ray = fpsCam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0)); //Just a ray through the middle of your current view
-        RaycastHit hit;
+        // MODIFICADO: Direção do tiro é para a frente do attackPoint
+        // Não usa mais raycast da câmara para determinar o ponto de mira inicial.
+        Vector3 directionWithoutSpread = attackPoint.forward;
 
-        //check if ray hits something
-        Vector3 targetPoint;
-        if (Physics.Raycast(ray, out hit))
-            targetPoint = hit.point;
-        else
-            targetPoint = ray.GetPoint(75); //Just a point far away from the player
-
-        //Calculate direction from attackPoint to targetPoint
-        Vector3 directionWithoutSpread = targetPoint - attackPoint.position;
-
-        //Calculate spread
+        // Calcular spread (dispersão)
         float x = Random.Range(-spread, spread);
         float y = Random.Range(-spread, spread);
-
-        //Calculate new direction with spread
-        Vector3 directionWithSpread = directionWithoutSpread + new Vector3(x, y, 0); //Just add spread to last direction
+        // Adicionar o spread à direção. Nota: Adicionar spread em eixos locais da arma pode ser mais realista.
+        // Esta implementação adiciona no espaço do mundo, o que pode ser aceitável.
+        Vector3 directionWithSpread = directionWithoutSpread + new Vector3(x, y, 0);
+        // Para um spread mais relativo à orientação da arma, poderia ser: 
+        // Vector3 directionWithSpread = directionWithoutSpread + attackPoint.right * x + attackPoint.up * y;
 
         //Instantiate bullet/projectile
-        GameObject currentBullet = Instantiate(bullet, attackPoint.position, Quaternion.identity); //store instantiated bullet in currentBullet
-        //Rotate bullet to shoot direction
-        currentBullet.transform.forward = directionWithSpread.normalized;
+        GameObject currentBullet = Instantiate(bullet, attackPoint.position, /*Quaternion.LookRotation(directionWithSpread.normalized)*/ attackPoint.rotation);
+        //Rotate bullet to shoot direction (já feito pelo Quaternion.LookRotation na instanciação)
+        // currentBullet.transform.forward = directionWithSpread.normalized;
 
         //Add forces to bullet
         currentBullet.GetComponent<Rigidbody>().AddForce(directionWithSpread.normalized * shootForce, ForceMode.Impulse);
-        currentBullet.GetComponent<Rigidbody>().AddForce(fpsCam.transform.up * upwardForce, ForceMode.Impulse);
+        // A força para cima (upwardForce) pode precisar de ajuste ou ser relativa à câmara se ainda desejado
+        // Se for para compensar gravidade ou dar um arco, pode ser mantida. Se fpsCam não existe mais, usar Vector3.up ou attackPoint.up.
+        if (upwardForce != 0)
+        {
+            currentBullet.GetComponent<Rigidbody>().AddForce(Vector3.up * upwardForce, ForceMode.Impulse); // Usando Vector3.up global
+        }
 
         //Instantiate muzzle flash, if you have one
         if (muzzleFlash != null)
-            Instantiate(muzzleFlash, attackPoint.position, Quaternion.identity);
+        {
+            GameObject muzzleFlashInstance = Instantiate(muzzleFlash, attackPoint.position, attackPoint.rotation, attackPoint); // Instancia como filho do attackPoint
+            Destroy(muzzleFlashInstance, muzzleFlashDuration); // MODIFICADO: Destrói o efeito após muzzleFlashDuration
+        }
 
         bulletsLeft--;
         bulletsShot++;
@@ -136,12 +128,19 @@ public class Gun : MonoBehaviour
             allowInvoke = false;
 
             //Add recoil to player (should only be called once)
-            //playerRb.AddForce(-directionWithSpread.normalized * recoilForce, ForceMode.Impulse);
+            // A lógica de recoil pode precisar de revisão se playerRb e a direção baseada na câmara mudaram.
+            // if (playerRb != null) playerRb.AddForce(-directionWithSpread.normalized * recoilForce, ForceMode.Impulse);
         }
 
         //if more than one bulletsPerTap make sure to repeat shoot function
         if (bulletsShot < bulletsPerTap && bulletsLeft > 0)
+        {
             Invoke("Shoot", timeBetweenShots);
+        }
+        else if (bulletsLeft <= 0 && !reloading) // Se acabaram as balas e não está a recarregar, recarrega
+        {
+            Reload();
+        }
     }
     private void ResetShot()
     {
@@ -152,13 +151,19 @@ public class Gun : MonoBehaviour
 
     private void Reload()
     {
+        if (reloading) return; // Evita múltiplas chamadas de Reload
         reloading = true;
+        // Debug.Log("Reloading..."); // Opcional: para feedback
         Invoke("ReloadFinished", reloadTime); //Invoke ReloadFinished function with your reloadTime as delay
     }
+
     private void ReloadFinished()
     {
         //Fill magazine
         bulletsLeft = magazineSize;
         reloading = false;
+        readyToShoot = true; // Garante que pode disparar após recarregar
+        // Debug.Log("Reload Finished!"); // Opcional: para feedback
     }
 }
+

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿
+using UnityEngine;
 using System.Collections;
 using UnityEngine.InputSystem; // Esta linha pode não ser necessária se estiver a usar Input.GetKey/GetButtonDown
 using UnityEngine.UI;
@@ -130,29 +131,24 @@ public class Player : MonoBehaviour
 
     void HandleWeaponToggle()
     {
-        // Usaremos a tecla "G" para alternar a arma como exemplo.
-        // Mude para o botão desejado (ex: Input.GetButtonDown("NomeDoSeuBotao")).
-        if (Input.GetKeyDown(KeyCode.G)) 
+        // Tecla para equipar/desequipar arma (ex: G)
+        if (Input.GetKeyDown(KeyCode.G))
         {
-            isWeaponActive = !isWeaponActive; // Alterna o estado da arma
+            isWeaponActive = !isWeaponActive;
 
             if (weaponObject != null)
             {
                 weaponObject.SetActive(isWeaponActive);
             }
 
-            // Define o parâmetro "isShoot" no Animator.
-            // Se a arma está ativa, isShoot = true. Se desativada, isShoot = false.
-            if (anim != null) 
+            if (anim != null)
             {
-                anim.SetBool("isShoot", isWeaponActive);
+                anim.SetBool("isShoot", isWeaponActive); // Atualiza o estado 'isShoot' no Animator
+                if (!isWeaponActive)
+                {
+                    anim.SetBool("isShooting", false); // Garante que 'isShooting' é falso se a arma for desequipada
+                }
             }
-
-            // Debug para verificar o estado
-            // Debug.Log("Weapon Active: " + isWeaponActive + ", isShoot Animator: " + (anim != null ? anim.GetBool("isShoot").ToString() : "Animator not found"));
-
-            // Se estiver a desativar a arma, pode ser necessário interromper outras ações
-            // relacionadas ao modo de tiro, se houver.
         }
     }
 
@@ -293,30 +289,56 @@ public class Player : MonoBehaviour
         if (anim != null) anim.SetTrigger("DoubleJump");
     }
 
-    void HandleAttack() 
+    void HandleAttack()
     {
-        // Considere: if (isWeaponActive) return; 
-        
-        if (attackTimer > 0)
+        if (attackTimer > 0) // Cooldown para ataques melee
         {
             attackTimer -= Time.deltaTime;
         }
 
-        if (Input.GetButtonDown("Fire2")) 
+        // Ataque Melee (ex: botão direito do rato)
+        if (Input.GetButtonDown("Fire2"))
         {
-            if (!isAttacking && attackTimer <= 0) Attack();
-            else bufferedAttack1 = true;
+            if (!isWeaponActive && !isAttacking && attackTimer <= 0) // Só ataca melee se arma desequipada e não estiver já a atacar
+            {
+                Attack(); // Inicia combo de ataque melee
+            }
+            else if (!isWeaponActive) // Buffer para ataque melee
+            {
+                bufferedAttack1 = true;
+            }
         }
 
-        if (Input.GetButton ("Fire1")) 
+        // Lógica de Disparo com Arma (ex: botão esquerdo do rato)
+        if (isWeaponActive && gun != null && anim != null)
         {
-            if (isWeaponActive && anim.GetBool("isShoot")) 
-            { /* Lógica de Tiro*/
-                anim.SetTrigger("fire");
-                gun.TryShoot();
-            } else 
-            { 
-                Fireball(); 
+            if (anim.GetBool("isShoot")) // Verifica se o Animator está no modo de arma
+            {
+                if (Input.GetButton("Fire1")) // GetButton para disparo contínuo se allowButtonHold=true em Gun.cs
+                {
+                    anim.SetBool("isShooting", true); // ATIVADO: Jogador está a disparar
+                    anim.SetTrigger("fire");
+                    gun.TryShoot(); // Tenta disparar a arma
+                }
+                else
+                {
+                    anim.SetBool("isShooting", false); // DESATIVADO: Jogador parou de disparar
+                }
+            }
+            else // Se animador não está em modo 'isShoot' (ex: a trocar de arma), não deve estar 'isShooting'
+            {
+                anim.SetBool("isShooting", false);
+            }
+        }
+        else
+        {
+            // Se a arma não está ativa, ou não há arma/animator, garantir que 'isShooting' é falso.
+            if (anim != null) anim.SetBool("isShooting", false);
+
+            // Lógica de Fireball (ex: botão esquerdo do rato se arma desequipada)
+            if (!isWeaponActive && Input.GetButtonDown("Fire1"))
+            {
+                Fireball();
             }
         }
     }
