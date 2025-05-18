@@ -8,6 +8,10 @@ public class Gun : MonoBehaviour
 
     //bullet force
     public float shootForce, upwardForce;
+    // ↙️  ADICIONE estas duas linhas
+    public Camera cam;        // arraste a câmera do jogador aqui
+    public float maxRayDistance = 1000f;   // alcance para o raycast da mira
+
 
     //Gun stats
     public float timeBetweenShooting, spread, reloadTime, timeBetweenShots;
@@ -148,6 +152,7 @@ public class Gun : MonoBehaviour
             Reload();
         }
     }
+
     private void ResetShot()
     {
         //Allow shooting and invoking again

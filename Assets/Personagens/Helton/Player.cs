@@ -1,9 +1,6 @@
-﻿
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections;
-using UnityEngine.InputSystem; // Esta linha pode não ser necessária se estiver a usar Input.GetKey/GetButtonDown
 using UnityEngine.UI;
-
 
 public class Player : MonoBehaviour
 {
@@ -12,28 +9,43 @@ public class Player : MonoBehaviour
 
     private Animator anim;
 
-    public GameObject attackEffectPrefab;     // arrasta o prefab do efeito aqui no Inspector
+    public GameObject attackEffectPrefab;
     public Transform effectSpawnPoint;
 
-    [Header("Demage")] 
+    [Header("Demage")]
     public LayerMask enemylayer;
     public float attackRadius = 3f;
     public float attackDemage = 10f;
     public Transform areaTransform;
-
 
     [Header("Speeds")]
     public float walkSpeed = 4.5f;
     public float runSpeed = 7.5f;
     public float jumpForce = 10f;
     public float gravity = 20f;
+    public float backwardSpeedMultiplier = 0.7f; // Multiplicador para velocidade ao andar para trás
+    public float rotationSpeed = 15f; // Velocidade de rotação do personagem ao mudar de direção
 
     private float verticalVelocity;
     private Vector3 moveDirection;
     private bool isJumping = false;
     private bool canDoubleJump = false;
 
+    // Parâmetros para o Animator Blend Tree
+    private float inputX = 0f;
+    private float inputY = 0f;
+
     public Transform cameraTransform;
+
+
+    [Header("Spine Rotation")]
+    public Transform spineTransform; // Arraste o GameObject "spine" (peitoral) aqui no Inspector
+    public float spineRotationSpeed = 10f; // Velocidade de rotação do spine
+    public float maxSpineAngle = 60f; // Ângulo máximo de rotação do spine
+    public bool rotateSpineX = true; // Rotacionar spine no eixo X (olhar para cima/baixo)
+    public bool rotateSpineY = true; // Rotacionar spine no eixo Y (olhar para os lados)
+    public float bodyRotationThreshold = 0.8f; // Limiar para começar a rotacionar o corpo (0-1, onde 1 é o ângulo máximo)
+    public float bodyRotationSpeed = 3f; // Velocidade de rotação do corpo quando ultrapassar o limiar
 
     [Header("Collions Hands e Toes")]
     public GameObject rightHand;
@@ -84,7 +96,9 @@ public class Player : MonoBehaviour
     [Header("Weapon System")]
     public GameObject weaponObject; // Arraste o GameObject da sua arma aqui no Inspector
     private bool isWeaponActive = false;
-    // A variável anim.GetBool("isShoot") pode ser usada para verificar o estado de "shoot"
+
+    // Variáveis para armazenar a rotação original do spine
+    private Quaternion spineOriginalRotation;
 
     void Start()
     {
@@ -105,11 +119,31 @@ public class Player : MonoBehaviour
         {
             weaponObject.SetActive(false);
         }
-        if (anim != null) 
+        if (anim != null)
         {
             anim.SetBool("isShoot", false);
+            anim.SetBool("isShooting", false);
+
+            // Inicializa os parâmetros inputX e inputY
+            anim.SetFloat("inputX", 0f);
+            anim.SetFloat("inputY", 0f);
         }
+
+        // Guarda a rotação original do spine se estiver atribuído
+        if (spineTransform != null)
+        {
+            spineOriginalRotation = spineTransform.localRotation;
+        }
+        else
+        {
+            Debug.LogWarning("Spine Transform não atribuído! Arraste o GameObject 'spine' para o campo spineTransform no Inspector.");
+        }
+
+        // Cria o crosshair
     }
+
+    // Método para criar o crosshair na tela
+
 
     public void editBarHealth(float vidaAtual, float vidaMaxima)
     {
@@ -118,15 +152,106 @@ public class Player : MonoBehaviour
 
     void Update()
     {
+        // Captura os inputs de movimento
+        inputX = Input.GetAxis("Horizontal");
+        inputY = Input.GetAxis("Vertical");
+
         Move();
-        HandleAttack(); // Considere se HandleAttack deve ser desabilitado quando isWeaponActive = true
-        HandleCombo();  // Considere se HandleCombo deve ser desabilitado quando isWeaponActive = true
+        HandleAttack();
+        HandleCombo();
         UpdateAnimation();
         pose();
-        HandleWeaponToggle(); // Lógica para ativar/desativar arma e modo de tiro
-        
-        // Se a arma estiver ativa (modo "isShoot"), você pode querer adicionar uma lógica de tiro aqui
-        // Ex: if (isWeaponActive && anim.GetBool("isShoot") && Input.GetButtonDown("Fire1")) { Shoot(); }
+        HandleWeaponToggle();
+    }
+
+    // LateUpdate é chamado após todas as atualizações de Update
+    // Ideal para ajustar a rotação do spine após o movimento do personagem
+    void LateUpdate()
+    {
+        // Só rotaciona o spine se estiver atacando ou com a arma ativa
+        if (isAttacking || isWeaponActive)
+        {
+            RotateSpineTowardsCamera();
+        }
+        else
+        {
+            // Se não estiver atacando ou com arma ativa, retorna o spine à rotação original
+            if (spineTransform != null)
+            {
+                spineTransform.localRotation = Quaternion.Slerp(
+                    spineTransform.localRotation,
+                    spineOriginalRotation,
+                    Time.deltaTime * spineRotationSpeed
+                );
+            }
+        }
+    }
+
+    // Método para rotacionar o spine na direção da câmera
+    void RotateSpineTowardsCamera()
+    {
+        if (spineTransform == null || cameraTransform == null) return;
+
+        // Obtém a direção da câmera
+        Vector3 cameraDirection = cameraTransform.forward;
+
+        // Cria uma rotação alvo baseada na direção da câmera
+        Quaternion targetRotation = Quaternion.LookRotation(cameraDirection, Vector3.up);
+
+        // Calcula a diferença entre a rotação do corpo e a rotação da câmera
+        float yawDifference = Mathf.DeltaAngle(transform.eulerAngles.y, cameraTransform.eulerAngles.y);
+
+        // Normaliza a diferença para o intervalo -180 a 180
+        yawDifference = Mathf.Clamp(yawDifference, -180f, 180f);
+
+        // Calcula o quanto o ângulo está próximo do limite máximo (0 = não está no limite, 1 = está no limite)
+        float yawRatio = Mathf.Abs(yawDifference) / maxSpineAngle;
+
+        // Se ultrapassar o limiar, rotaciona o corpo do personagem
+        // Só rotaciona o corpo se estiver atacando ou com a arma ativa
+        if (yawRatio > bodyRotationThreshold && (isAttacking || isWeaponActive))
+        {
+            // Calcula quanto o corpo deve rotacionar
+            float rotationAmount = (yawRatio - bodyRotationThreshold) / (1 - bodyRotationThreshold);
+
+            // Cria uma rotação alvo para o corpo
+            Quaternion bodyTargetRotation = Quaternion.Euler(0, cameraTransform.eulerAngles.y, 0);
+
+            // Aplica a rotação suavemente ao corpo
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                bodyTargetRotation,
+                Time.deltaTime * bodyRotationSpeed * rotationAmount
+            );
+        }
+
+        // Ajusta a rotação do spine
+        // Obtém o ângulo de pitch da câmera (olhar para cima/baixo)
+        float pitchAngle = cameraTransform.eulerAngles.x;
+
+        // Normaliza para o intervalo -180 a 180
+        if (pitchAngle > 180) pitchAngle -= 360;
+
+        // Limita o ângulo ao máximo permitido
+        pitchAngle = Mathf.Clamp(pitchAngle, -maxSpineAngle, maxSpineAngle);
+
+        // Recalcula a diferença de yaw após a possível rotação do corpo
+        yawDifference = Mathf.DeltaAngle(transform.eulerAngles.y, cameraTransform.eulerAngles.y);
+        yawDifference = Mathf.Clamp(yawDifference, -maxSpineAngle, maxSpineAngle);
+
+        // Cria a rotação final com os eixos ajustados
+        Quaternion spineTargetRotation = Quaternion.Euler(
+            rotateSpineX ? pitchAngle : spineOriginalRotation.eulerAngles.x,
+            rotateSpineY ? yawDifference : 0,
+            spineOriginalRotation.eulerAngles.z
+        );
+
+        // Aplica a rotação suavemente ao spine
+        spineTransform.localRotation = Quaternion.Slerp(
+            spineTransform.localRotation,
+            spineTargetRotation,
+            Time.deltaTime * spineRotationSpeed
+        );
     }
 
     void HandleWeaponToggle()
@@ -166,23 +291,23 @@ public class Player : MonoBehaviour
 
     void Move()
     {
-        float horizontalInput = 0f;
-        float verticalInput = 0f;
+        float horizontalInput = inputX;
+        float verticalInput = inputY;
         bool isMoving = false;
         bool isRunning = false;
         float currentSpeed = 0f;
         Vector3 move = Vector3.zero;
 
-        if (!isAttacking) 
+        if (!isAttacking)
         {
-            horizontalInput = Input.GetAxis("Horizontal");
-            verticalInput = Input.GetAxis("Vertical");
             isMoving = horizontalInput != 0 || verticalInput != 0;
             isRunning = isMoving && (Input.GetKey(KeyCode.LeftShift) || Input.GetButton("Run"));
             currentSpeed = isRunning ? runSpeed : walkSpeed;
 
             if (cameraTransform != null)
             {
+                // MODIFICADO: Sempre usa a direção da câmera como referência para o movimento
+                // Isso faz com que o personagem se mova na direção para onde a câmera está apontando
                 Vector3 forward = cameraTransform.forward;
                 Vector3 right = cameraTransform.right;
 
@@ -191,12 +316,24 @@ public class Player : MonoBehaviour
                 forward.Normalize();
                 right.Normalize();
 
+                // Aplica multiplicador de velocidade quando se move para trás
+                if (verticalInput < 0)
+                {
+                    currentSpeed *= backwardSpeedMultiplier;
+                }
+
                 move = (forward * verticalInput + right * horizontalInput).normalized * currentSpeed;
             }
             else
             {
                 // Fallback ou aviso se cameraTransform não estiver definida
                 move = (new Vector3(horizontalInput, 0, verticalInput)).normalized * currentSpeed;
+
+                // Aplica multiplicador de velocidade quando se move para trás
+                if (verticalInput < 0)
+                {
+                    move *= backwardSpeedMultiplier;
+                }
             }
         }
 
@@ -208,7 +345,7 @@ public class Player : MonoBehaviour
             verticalVelocity = -gravity * Time.deltaTime;
             canDoubleJump = true;
 
-            if (Input.GetButtonDown("Jump") && !isAttacking) 
+            if (Input.GetButtonDown("Jump") && !isAttacking)
             {
                 Jump();
             }
@@ -231,13 +368,15 @@ public class Player : MonoBehaviour
             controller.Move(moveDirection * Time.deltaTime);
         }
 
+        // MODIFICADO: Rotaciona o personagem na direção do movimento sempre que estiver se movendo
+        // Isso faz com que o personagem sempre olhe para onde está indo, como no Fortnite
         if (isMoving && !isAttacking)
         {
             Vector3 lookDirection = new Vector3(move.x, 0, move.z);
             if (lookDirection.magnitude > 0.1f)
             {
                 Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * 10f);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
             }
         }
     }
@@ -246,17 +385,22 @@ public class Player : MonoBehaviour
     {
         if (anim == null) return;
 
+        // Atualiza os parâmetros inputX e inputY no Animator para uso no Blend Tree
+        anim.SetFloat("inputX", inputX);
+        anim.SetFloat("inputY", inputY);
+
         Vector3 horizontalVelocity = Vector3.zero;
-        if (controller != null && controller.enabled) {
+        if (controller != null && controller.enabled)
+        {
             horizontalVelocity = new Vector3(controller.velocity.x, 0, controller.velocity.z);
         }
         float currentHorizontalSpeed = horizontalVelocity.magnitude;
 
         float animatorSpeed = 0f;
-        
+
         if (!isAttacking)
         {
-            bool isRunning = Input.GetButton("Run") || Input.GetKey(KeyCode.LeftShift); 
+            bool isRunning = Input.GetButton("Run") || Input.GetKey(KeyCode.LeftShift);
             if (currentHorizontalSpeed > 0.1f)
             {
                 animatorSpeed = isRunning ? 2f : 1f;
@@ -346,7 +490,7 @@ public class Player : MonoBehaviour
     void Fireball()
     {
         if (anim != null) anim.SetTrigger("Fireball");
-        if (attackEffectPrefab != null && effectSpawnPoint != null) 
+        if (attackEffectPrefab != null && effectSpawnPoint != null)
         {
             StartCoroutine(EsperarAnim(timeFireball));
         }
@@ -355,7 +499,7 @@ public class Player : MonoBehaviour
     IEnumerator EsperarAnim(float time)
     {
         yield return new WaitForSeconds(time);
-        if (attackEffectPrefab != null && effectSpawnPoint != null) 
+        if (attackEffectPrefab != null && effectSpawnPoint != null)
         {
             Instantiate(attackEffectPrefab, effectSpawnPoint.position, effectSpawnPoint.rotation);
         }
@@ -375,10 +519,10 @@ public class Player : MonoBehaviour
         }
     }
 
-    void Attack() 
+    void Attack()
     {
         isAttacking = true;
-        if (anim != null) anim.SetBool("isAttacking", true); 
+        if (anim != null) anim.SetBool("isAttacking", true);
 
         attackTimer = attackCooldown;
 
@@ -391,10 +535,9 @@ public class Player : MonoBehaviour
             case 0:
                 attackAnimIDToPlay = attack1AnimID;
                 dashDistance = attack1DashDistance;
-                // dashDuration = attack2DashDuration; // Parece que esta linha não é usada para o Attack1
                 if (anim != null) anim.SetTrigger("Attack1");
                 Demage();
-                SetTrailRenderer(rightToe, false, Color.white, Color.white, 0.1f, 0f); // Exemplo de cores e larguras
+                SetTrailRenderer(rightToe, false, Color.white, Color.white, 0.1f, 0f);
                 SetTrailRenderer(rightHand, true, Color.red, Color.yellow, 0.2f, 0f);
                 SetTrailRenderer(leftHand, false, Color.white, Color.white, 0.1f, 0f);
                 break;
@@ -421,10 +564,9 @@ public class Player : MonoBehaviour
             case 3:
                 attackAnimIDToPlay = attack4AnimID;
                 if (anim != null) anim.SetTrigger("Attack4");
-                dashDistance = attack3DashDistance; // Reutiliza attack3DashDistance
-                dashDuration = attack3DashDuration; // Reutiliza attack3DashDuration
+                dashDistance = attack3DashDistance;
+                dashDuration = attack3DashDuration;
                 Demage();
-                // DelayedSlowMotion(0.2f, 0.3f, 0.4f); 
                 SetTrailRenderer(leftHand, true, Color.magenta, Color.cyan, 0.2f, 0f);
                 SetTrailRenderer(rightToe, true, Color.green, Color.cyan, 0.2f, 0f);
                 break;
@@ -435,27 +577,26 @@ public class Player : MonoBehaviour
             //StartCoroutine(AttackDash(dashDistance, dashDuration));
         }
 
-        comboTimer1 = 1f; 
-        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimIDToPlay), true)); 
+        comboTimer1 = comboWindow;
+        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimIDToPlay), true));
     }
 
-    void Attack2() 
+    void Attack2()
     {
         isAttacking = true;
-        if (anim != null) anim.SetBool("isAttacking", true); 
+        if (anim != null) anim.SetBool("isAttacking", true);
 
         attackTimer = attackCooldown;
 
-        int attackAnimIDToPlay = attack5AnimID; // Usar IDs corretos para combo2
+        int attackAnimIDToPlay = attack5AnimID;
         float dashDistance = 0f;
         float dashDuration = 0f;
 
         switch (currentCombo2)
         {
             case 0:
-                attackAnimIDToPlay = attack5AnimID; // Ex: c2Attack1
+                attackAnimIDToPlay = attack5AnimID;
                 dashDistance = attack1DashDistance;
-                // dashDuration = attack2DashDuration;
                 if (anim != null) anim.SetTrigger("c2Attack1");
                 Demage();
                 SetTrailRenderer(rightToe, false, Color.white, Color.white, 0.1f, 0f);
@@ -464,7 +605,7 @@ public class Player : MonoBehaviour
                 break;
 
             case 1:
-                attackAnimIDToPlay = attack6AnimID; // Ex: c2Attack2
+                attackAnimIDToPlay = attack6AnimID;
                 dashDistance = attack2DashDistance;
                 dashDuration = attack2DashDuration;
                 if (anim != null) anim.SetTrigger("c2Attack2");
@@ -472,7 +613,6 @@ public class Player : MonoBehaviour
                 SetTrailRenderer(leftHand, true, Color.blue, Color.cyan, 0.2f, 0f);
                 SetTrailRenderer(rightHand, false, Color.white, Color.white, 0.1f, 0f);
                 break;
-            // Adicione case 2 e 3 para c2Attack3 e c2Attack4 se existirem no Animator e GetAnimationDuration
         }
 
         if (dashDistance > 0 && dashDuration > 0)
@@ -480,20 +620,72 @@ public class Player : MonoBehaviour
             //StartCoroutine(AttackDash(dashDistance, dashDuration));
         }
 
-        comboTimer2 = 6f; 
-        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimIDToPlay), false)); 
+        comboTimer2 = comboWindow;
+        StartCoroutine(ResetAttackState(GetAnimationDuration(attackAnimIDToPlay), false));
     }
-    
+
     void Demage()
     {
-        // Debug.Log("Damage Dealt (Placeholder)");
         if (areaTransform == null || enemylayer == 0) return;
         Collider[] hitEnemies = Physics.OverlapSphere(areaTransform.position, attackRadius, enemylayer);
         foreach (Collider enemy in hitEnemies)
         {
-            // Supondo que o inimigo tem um script com o método TakeDamage
-            // Ex: enemy.GetComponent<EnemyHealth>()?.TakeDamage(attackDemage);
             Debug.Log("Hit: " + enemy.name);
+            // enemy.GetComponent<EnemyHealth>()?.TakeDamage(attackDemage);
+        }
+    }
+
+    void HandleCombo()
+    {
+        if (comboTimer1 > 0) comboTimer1 -= Time.deltaTime;
+        else currentCombo1 = 0;
+
+        if (comboTimer2 > 0) comboTimer2 -= Time.deltaTime;
+        else currentCombo2 = 0;
+
+        if (bufferedAttack1 && !isAttacking && attackTimer <= 0 && !isWeaponActive)
+        {
+            Attack();
+            bufferedAttack1 = false;
+        }
+    }
+
+    IEnumerator ResetAttackState(float delay, bool isCombo1)
+    {
+        yield return new WaitForSeconds(delay);
+        isAttacking = false;
+        if (anim != null) anim.SetBool("isAttacking", false);
+
+        // Desativa todos os trails após a animação de ataque
+        SetTrailRenderer(rightHand, false, Color.white, Color.white, 0.1f, 0f);
+        SetTrailRenderer(leftHand, false, Color.white, Color.white, 0.1f, 0f);
+        SetTrailRenderer(rightToe, false, Color.white, Color.white, 0.1f, 0f);
+
+        if (isCombo1)
+        {
+            if (comboTimer1 > 0) currentCombo1 = (currentCombo1 + 1) % 4; // Assumindo 4 ataques no combo 1
+            else currentCombo1 = 0;
+        }
+        else
+        {
+            if (comboTimer2 > 0) currentCombo2 = (currentCombo2 + 1) % 2; // Assumindo 2 ataques no combo 2
+            else currentCombo2 = 0;
+        }
+    }
+
+    float GetAnimationDuration(int attackID)
+    {
+        // Placeholder para duração da animação
+        return 0.5f;
+    }
+
+    // Método para visualizar o raio de ataque no editor
+    void OnDrawGizmosSelected()
+    {
+        if (areaTransform != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(areaTransform.position, attackRadius);
         }
     }
 
@@ -502,114 +694,4 @@ public class Player : MonoBehaviour
         // if (slowMo != null) slowMo.TriggerSlowMotionTimed(scale, duration, delay); // Ajuste os parâmetros conforme a API do seu SlowMotionHandler
         Debug.Log("Delayed Slow Motion (Placeholder)");
     }
-    
-    float GetAnimationDuration(int attackID)
-    {
-        //combo 1
-        if (attackID == attack1AnimID) return 0.4f;
-        if (attackID == attack2AnimID) return 0.5f;
-        if (attackID == attack3AnimID) return 0.6f;
-        if (attackID == attack4AnimID) return 0.7f;
-
-        //combo2
-        if (attackID == attack5AnimID) return 0.4f; // c2Attack1
-        if (attackID == attack6AnimID) return 0.6f; // c2Attack2
-        // if (attackID == 7) return 0.6f; // c2Attack3 (attack7AnimID)
-        // if (attackID == 8) return 0.7f; // c2Attack4 (attack8AnimID)
-        return 0.4f; 
-    }
-
-    IEnumerator ResetAttackState(float animationDuration, bool isCombo1)
-    {
-        int currentCombo = isCombo1 ? currentCombo1 : currentCombo2;
-
-        if(isCombo1 == true)
-        {
-            if (currentCombo == 2) // Attack3 do combo1
-            {
-                animationDuration += 0.1f; 
-            }
-
-            if (currentCombo == 3) // Attack4 do combo1
-            {
-                animationDuration += 0.5f; 
-            }
-        }
-        // Adicionar lógica similar para isCombo2 se os ataques tiverem durações que precisam de ajuste
-
-        yield return new WaitForSeconds(animationDuration);
-
-        if (isCombo1)
-        {
-            if (comboTimer1 > 0)
-                currentCombo1 = (currentCombo1 + 1) % 4; 
-            else
-                currentCombo1 = 0;
-        }
-        else 
-        {
-            // Ajuste o módulo conforme o número de ataques no combo2 (ex: % 2 se só tiver c2Attack1 e c2Attack2 implementados)
-            int maxCombo2Attacks = 2; // Se tiver mais, aumente este número
-            if (comboTimer2 > 0)
-                currentCombo2 = (currentCombo2 + 1) % maxCombo2Attacks; 
-            else
-                currentCombo2 = 0;
-        }
-
-        if (isCombo1 && bufferedAttack1)
-        {
-            bufferedAttack1 = false;
-            Attack(); 
-        }
-        else if (!isCombo1 && bufferedAttack2)
-        {
-            bufferedAttack2 = false;
-            Attack2(); 
-        }
-        else
-        {
-            isAttacking = false;
-            if (anim != null) anim.SetBool("isAttacking", false);
-            // Debug.Log("Estado de ataque resetado.");
-        }
-    }
-
-    IEnumerator AttackDash(float distance, float duration)
-    {
-        if (controller == null || !controller.enabled) yield break;
-        float elapsed = 0f;
-        Vector3 dashDirection = transform.forward;
-        float speed = distance / duration;
-
-        while (elapsed < duration)
-        {
-            float moveAmount = speed * Time.deltaTime;
-            controller.Move(dashDirection * moveAmount);
-
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-    }
-
-    void HandleCombo()
-    {
-        if (comboTimer1 > 0)
-        {
-            comboTimer1 -= Time.deltaTime;
-            if (comboTimer1 <= 0)
-            {
-                currentCombo1 = 0;
-            }
-        }
-
-        if (comboTimer2 > 0)
-        {
-            comboTimer2 -= Time.deltaTime;
-            if (comboTimer2 <= 0)
-            {
-                currentCombo2 = 0;
-            }
-        }
-    }
 }
-
