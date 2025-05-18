@@ -58,6 +58,12 @@ public class Gun : MonoBehaviour
         }
     }
 
+    public void Start()
+    {
+        ammunitionDisplay.SetText(bulletsLeft / bulletsPerTap + " / " + magazineSize / bulletsPerTap);
+
+    }
+
     private void Update()
     {
         // A lógica de input foi movida para Player.cs para melhor controlo centralizado
