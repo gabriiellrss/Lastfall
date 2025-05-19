@@ -1,30 +1,42 @@
 using UnityEngine;
 
-public class DemageEnemien : MonoBehaviour
+public class DamageEnemy : MonoBehaviour
 {
+    [Header("Alvo e raio do ataque")]
+    [Tooltip("Centro da área de ataque")]
+    public Transform areaTransform;           
+    [Min(0.1f)] public float attackRadius = 3f;
 
-    [Header("Demage")]
-    public LayerMask enemylayer;
-    public float attackRadius = 3f;
-    public float attackDemage = 10f;
-    public Transform areaTransform;
+    [Header("Dano")]
+    public float attackDamage = 10f;
+
+    [Header("Layers que podem receber dano")]
+    public LayerMask enemyLayer;               
 
     void Update()
     {
-        Collider[] hitColliders = Physics.OverlapSphere(areaTransform.position, attackRadius, enemylayer);
-
-        Debug.Log("attack demage");
-
-        foreach (Collider collider in hitColliders)
+        if (Physics.CheckSphere(areaTransform.position, attackRadius, enemyLayer))
         {
+            Damage();
+        }
+    }
 
-            Enemy enemy = collider.GetComponent<Enemy>();
-            if (enemy != null)
+    void Damage()
+    {
+        Collider[] hits = Physics.OverlapSphere(areaTransform.position, attackRadius, enemyLayer);  
+        foreach (Collider hit in hits)
+        {
+            if (hit.TryGetComponent(out Enemy enemy))
             {
-                Debug.Log("attack enemy");
-                enemy.TakeDemage(attackDemage);
+                enemy.TakeDemage(attackDamage);
             }
         }
+    }
 
+    void OnDrawGizmosSelected()
+    {
+        if (!areaTransform) return;
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(areaTransform.position, attackRadius);
     }
 }

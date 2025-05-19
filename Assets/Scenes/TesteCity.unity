@@ -321,7 +321,16 @@ MonoBehaviour:
   runSpeed: 8
   jumpForce: 10
   gravity: 30
+  backwardSpeedMultiplier: 0.7
+  rotationSpeed: 15
   cameraTransform: {fileID: 330585546}
+  spineTransform: {fileID: 0}
+  spineRotationSpeed: 10
+  maxSpineAngle: 60
+  rotateSpineX: 1
+  rotateSpineY: 1
+  bodyRotationThreshold: 0.8
+  bodyRotationSpeed: 3
   rightHand: {fileID: 1950872128}
   leftHand: {fileID: 1240017906}
   rightToe: {fileID: 76286594}

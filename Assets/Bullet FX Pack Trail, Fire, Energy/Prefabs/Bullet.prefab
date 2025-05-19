@@ -143,6 +143,7 @@ GameObject:
   - component: {fileID: 4331849889720792114}
   - component: {fileID: 5990537768789886725}
   - component: {fileID: 6346483544761527548}
+  - component: {fileID: -4624250512671440002}
   m_Layer: 0
   m_Name: Bullet
   m_TagString: Untagged
@@ -266,6 +267,18 @@ MonoBehaviour:
   BulletTrailMaterial: {fileID: 2100000, guid: cf6917fc065af13468d7d051a191c5d2, type: 2}
   Fire2Effect: {fileID: 1356079634879675347}
   Fire3Effect: {fileID: 8660081015896966768}
+--- !u!114 &-4624250512671440002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8297191405790434548}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e98645f03fe59247ba9d44d7b6094e2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &8660081015896966768
 GameObject:
   m_ObjectHideFlags: 0

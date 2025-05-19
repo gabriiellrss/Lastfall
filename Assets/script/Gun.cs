@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using TMPro;
+using Unity.Cinemachine;
 
 public class Gun : MonoBehaviour
 {
@@ -25,7 +26,9 @@ public class Gun : MonoBehaviour
     public float recoilForce;
 
     //bools
-    bool shooting, readyToShoot, reloading;
+    bool shooting, reloading;
+
+    public bool readyToShoot;
 
     //Reference
     // public Camera fpsCam; // Comentado/Removido: Não será usado para a direção do tiro base
@@ -94,64 +97,55 @@ public class Gun : MonoBehaviour
     {
         readyToShoot = false;
 
-        // MODIFICADO: Direção do tiro é para a frente do attackPoint
-        // Não usa mais raycast da câmara para determinar o ponto de mira inicial.
-        Vector3 directionWithoutSpread = attackPoint.forward;
+        // ────────── 1. Raycast do centro da câmera ──────────
+        Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        Vector3 targetPoint = Physics.Raycast(ray, out RaycastHit hit, maxRayDistance)
+                            ? hit.point
+                            : ray.GetPoint(maxRayDistance);
 
-        // Calcular spread (dispersão)
+        // Direção base (sem spread)
+        Vector3 dir = (targetPoint - attackPoint.position).normalized;
+
+        // ────────── 2. Spread (opcional) ──────────
         float x = Random.Range(-spread, spread);
         float y = Random.Range(-spread, spread);
-        // Adicionar o spread à direção. Nota: Adicionar spread em eixos locais da arma pode ser mais realista.
-        // Esta implementação adiciona no espaço do mundo, o que pode ser aceitável.
-        Vector3 directionWithSpread = directionWithoutSpread + new Vector3(x, y, 0);
-        // Para um spread mais relativo à orientação da arma, poderia ser: 
-        // Vector3 directionWithSpread = directionWithoutSpread + attackPoint.right * x + attackPoint.up * y;
+        dir = (dir + attackPoint.right * x + attackPoint.up * y).normalized;
 
-        //Instantiate bullet/projectile
-        GameObject currentBullet = Instantiate(bullet, attackPoint.position, /*Quaternion.LookRotation(directionWithSpread.normalized)*/ attackPoint.rotation);
-        //Rotate bullet to shoot direction (já feito pelo Quaternion.LookRotation na instanciação)
-        // currentBullet.transform.forward = directionWithSpread.normalized;
+        CinemachineShake.Instance.ShakeCamera(5f, .1f);
 
-        //Add forces to bullet
-        currentBullet.GetComponent<Rigidbody>().AddForce(directionWithSpread.normalized * shootForce, ForceMode.Impulse);
-        // A força para cima (upwardForce) pode precisar de ajuste ou ser relativa à câmara se ainda desejado
-        // Se for para compensar gravidade ou dar um arco, pode ser mantida. Se fpsCam não existe mais, usar Vector3.up ou attackPoint.up.
-        if (upwardForce != 0)
-        {
-            currentBullet.GetComponent<Rigidbody>().AddForce(Vector3.up * upwardForce, ForceMode.Impulse); // Usando Vector3.up global
-        }
+        // ────────── 3. Instancia o projétil ──────────
+        GameObject go = Instantiate(bullet, attackPoint.position, Quaternion.LookRotation(dir));
 
-        //Instantiate muzzle flash, if you have one
+        // ────────── 4. Dá velocidade para a bala ──────────
+        Rigidbody rb = go.GetComponent<Rigidbody>();
+        rb.AddForce(dir * shootForce, ForceMode.Impulse);   //  ← sinal trocado                                                             // shootForce = velocidade em m/s
+        if (upwardForce != 0)                     // se quiser compensação vertical extra
+            rb.linearVelocity += Vector3.up * upwardForce;
+
+        // ────────── 5. Muzzle flash ──────────
         if (muzzleFlash != null)
         {
-            GameObject muzzleFlashInstance = Instantiate(muzzleFlash, attackPoint.position, attackPoint.rotation, attackPoint); // Instancia como filho do attackPoint
-            Destroy(muzzleFlashInstance, muzzleFlashDuration); // MODIFICADO: Destrói o efeito após muzzleFlashDuration
+            GameObject flash = Instantiate(muzzleFlash, attackPoint.position, attackPoint.rotation, attackPoint);
+            Destroy(flash, muzzleFlashDuration);
         }
 
+        // ────────── 6. Contadores e rajada ──────────
         bulletsLeft--;
         bulletsShot++;
 
-        //Invoke resetShot function (if not already invoked), with your timeBetweenShooting
         if (allowInvoke)
         {
-            Invoke("ResetShot", timeBetweenShooting);
+            Invoke(nameof(ResetShot), timeBetweenShooting);
             allowInvoke = false;
-
-            //Add recoil to player (should only be called once)
-            // A lógica de recoil pode precisar de revisão se playerRb e a direção baseada na câmara mudaram.
-            // if (playerRb != null) playerRb.AddForce(-directionWithSpread.normalized * recoilForce, ForceMode.Impulse);
         }
 
-        //if more than one bulletsPerTap make sure to repeat shoot function
         if (bulletsShot < bulletsPerTap && bulletsLeft > 0)
-        {
-            Invoke("Shoot", timeBetweenShots);
-        }
-        else if (bulletsLeft <= 0 && !reloading) // Se acabaram as balas e não está a recarregar, recarrega
-        {
+            Invoke(nameof(Shoot), timeBetweenShots);
+        else if (bulletsLeft <= 0 && !reloading)
             Reload();
-        }
     }
+
+
 
     private void ResetShot()
     {
