@@ -54,6 +54,8 @@ public class Enemy : MonoBehaviour
     public enum AIState { Patrolling, Chasing, Searching, Attacking, Dead }
     public AIState currentState = AIState.Patrolling;
 
+    public static System.Action OnEnemyDied { get; internal set; }
+
     void Start()
     {
         animator = GetComponentInParent<Animator>();
