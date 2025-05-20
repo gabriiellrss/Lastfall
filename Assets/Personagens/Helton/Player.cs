@@ -1,8 +1,9 @@
 ﻿    using UnityEngine;
     using System.Collections;
     using UnityEngine.UI;
+using System;
 
-    public class Player : MonoBehaviour
+public class Player : MonoBehaviour
     {
         private CharacterController controller;
         private SlowMotionHandler slowMo;
@@ -87,8 +88,8 @@
 
         [SerializeField] private Image barHealth;
 
-        public int maxHealth = 100;
-        private int currentHealth;
+        public float maxHealth = 100;
+        public float currentHealth;
 
         public Gun gun;
 
@@ -650,6 +651,7 @@
                 bufferedAttack1 = false;
             }
         }
+        
 
         IEnumerator ResetAttackState(float delay, bool isCombo1)
         {
@@ -695,4 +697,39 @@
             // if (slowMo != null) slowMo.TriggerSlowMotionTimed(scale, duration, delay); // Ajuste os parâmetros conforme a API do seu SlowMotionHandler
             Debug.Log("Delayed Slow Motion (Placeholder)");
         }
+
+    public void TakeDamage(float damageAmount)
+    {
+        currentHealth -= damageAmount;
+        currentHealth = Mathf.Max(currentHealth, 0); // Garante que não fique negativo
+
+        // Atualiza a barra de vida
+        editBarHealth(currentHealth, maxHealth);
+
+        // Adicione efeitos/animacoes de dano aqui
+        if (anim != null) anim.SetTrigger("Damage");
+
+        // Verifica morte
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
     }
+
+    private void Die()
+    {
+        // Adicione lógica de morte do jogador
+        if (anim != null) anim.SetTrigger("Die");
+
+        Destroy(gameObject);
+
+        // Desativa controles
+        //enabled = false;
+        //controller.enabled = false;
+
+        // Exemplo: Recarrega a cena após 3 segundos
+        // StartCoroutine(ReloadScene(3f));
+    }
+
+
+}
