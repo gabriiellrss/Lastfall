@@ -4777,12 +4777,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 532f253aadcf37b4591fc44c7f2b0904, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enemylayer:
-    serializedVersion: 2
-    m_Bits: 64
-  attackRadius: 3
-  attackDemage: 10
   areaTransform: {fileID: 3038004994462307217}
+  attackRadius: 3
+  attackDamage: 10
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!1 &100004
 GameObject:
   m_ObjectHideFlags: 0
@@ -14347,8 +14347,8 @@ Light:
   serializedVersion: 11
   m_Type: 2
   m_Color: {r: 0.99264705, g: 0.48162505, b: 0.20436853, a: 1}
-  m_Intensity: 10
-  m_Range: 30
+  m_Intensity: 647.2
+  m_Range: 335.6
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
