@@ -195,7 +195,7 @@ MonoBehaviour:
   maxDistanceFromPlayer: 6
   facePlayer: 1
   avoidFrontSpawn: 0
-  spawnEffect: {fileID: 100010, guid: a087aa2c7016d2042a3b744b2afc4fb0, type: 3}
+  spawnEffect: {fileID: 0}
   spawnSound: {fileID: 0}
 --- !u!1 &223455654 stripped
 GameObject:
@@ -499,7 +499,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 6.9848277e-10, y: -0.0046936236, z: 3.2784513e-12, w: 0.999989}
+  m_LocalRotation: {x: -4.053759e-22, y: -0.0047096363, z: -1.9091943e-24, w: 0.9999889}
   m_LocalPosition: {x: -138.34969, y: 5.4949903, z: -5.459853}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
@@ -1630,7 +1630,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2038645180}
   serializedVersion: 2
-  m_LocalRotation: {x: 6.984827e-10, y: -0.004693623, z: 3.2784506e-12, w: 0.99998903}
+  m_LocalRotation: {x: -6.154224e-22, y: -0.0047096363, z: 4.45969e-20, w: 0.9999889}
   m_LocalPosition: {x: -138.34969, y: 5.4949903, z: -5.459853}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0

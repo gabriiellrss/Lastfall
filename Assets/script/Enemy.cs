@@ -53,9 +53,17 @@ public class Enemy : MonoBehaviour
     private float dodgeTimer = 0f;
     private Vector3 dodgeDirection;
 
+    [Header("Configurações de Rotação e Animação")]
+    public float rotationThreshold = 45f; // Limiar de rotação para ativar a animação (em graus)
+    public float rotationCheckInterval = 0.1f; // Intervalo para verificar a rotação
+    public float rotationAnimationDuration = 0.5f; // Duração da animação de rotação
+    private float rotationCheckTimer = 0f;
+    private bool isRotating = false;
+    private float rotationAnimationTimer = 0f;
+
     [Header("Configurações de Vida e Reaparecimento")]
     public float maxHealth = 100f;
-    public float currentHealth;
+    private float currentHealth;
     public List<Transform> respawnPoints; // Lista de pontos para reaparecimento
     public float respawnDelay = 5f;
     private bool isDead = false;
@@ -84,6 +92,10 @@ public class Enemy : MonoBehaviour
     private float positionUpdateInterval = 0.5f; // Intervalo para atualizar a lista de posições
     private float positionUpdateTimer = 0f;
 
+    // Variáveis para controle de rotação e animação
+    private Quaternion previousRotation; // Rotação anterior para calcular o ângulo de giro
+    private Vector3 previousForward; // Direção anterior para calcular o ângulo de giro
+
     public static System.Action OnEnemyDied { get; internal set; }
 
     void Start()
@@ -110,6 +122,10 @@ public class Enemy : MonoBehaviour
             playerScript = player.GetComponent<Player>(); // Obtém referência ao script do Player
         }
 
+        // Inicializa a rotação anterior com a rotação atual
+        previousRotation = transform.rotation;
+        previousForward = transform.forward;
+
         currentHealth = maxHealth;
         agent.speed = patrolSpeed;
         GoToNextPatrolPoint();
@@ -121,6 +137,9 @@ public class Enemy : MonoBehaviour
 
         // Atualiza informações do jogador
         UpdatePlayerInfo();
+
+        // Verifica rotação para ativar animação de giro
+        CheckRotationForAnimation();
 
         // Lógica de transição de estados baseada na detecção e distância
         bool canSeePlayer = CanSeePlayer();
@@ -145,6 +164,21 @@ public class Enemy : MonoBehaviour
                 }
             }
             return; // Não faz mais nada enquanto estiver esquivando
+        }
+
+        // Atualiza o timer de animação de rotação
+        if (isRotating)
+        {
+            rotationAnimationTimer -= Time.deltaTime;
+            if (rotationAnimationTimer <= 0)
+            {
+                // Reseta o parâmetro de rotação quando a animação terminar
+                if (animator != null)
+                {
+                    animator.SetBool("isRotating45", false);
+                }
+                isRotating = false;
+            }
         }
 
         // Lógica de transição de estados
@@ -235,6 +269,44 @@ public class Enemy : MonoBehaviour
 
         // Atualiza a lista de posições recentes do jogador
         UpdateRecentPlayerPositions();
+
+        // Atualiza a rotação anterior para o próximo frame
+        previousRotation = transform.rotation;
+        previousForward = transform.forward;
+    }
+
+    // Método para verificar a rotação e ativar a animação quando necessário
+    void CheckRotationForAnimation()
+    {
+        // Se já estiver em animação de rotação, não verifica novamente
+        if (isRotating) return;
+
+        // Incrementa o timer de verificação
+        rotationCheckTimer += Time.deltaTime;
+
+        // Verifica a rotação apenas no intervalo definido para economizar recursos
+        if (rotationCheckTimer >= rotationCheckInterval)
+        {
+            rotationCheckTimer = 0f;
+
+            // Calcula o ângulo entre a direção anterior e a atual
+            float angle = Vector3.Angle(previousForward, transform.forward);
+
+            // Se o ângulo for maior que o limiar, ativa a animação de rotação
+            if (angle >= rotationThreshold)
+            {
+                // Ativa o parâmetro de rotação no Animator
+                if (animator != null)
+                {
+                    animator.SetBool("isRotating45", true);
+                    Debug.Log("Ativando animação de rotação de 45 graus! Ângulo: " + angle);
+                }
+
+                // Marca como rotacionando e inicia o timer
+                isRotating = true;
+                rotationAnimationTimer = rotationAnimationDuration;
+            }
+        }
     }
 
     void UpdatePlayerInfo()
@@ -243,7 +315,7 @@ public class Enemy : MonoBehaviour
         {
             // Verifica se o jogador está atacando
             bool isPlayerAttacking = false;
-            if (animator != null && animator.GetBool("isAttacking"))
+            if (playerScript.GetComponent<Animator>() != null && playerScript.GetComponent<Animator>().GetBool("isAttacking"))
             {
                 isPlayerAttacking = true;
                 timeSinceLastPlayerAttack = 0f;
@@ -263,15 +335,31 @@ public class Enemy : MonoBehaviour
 
             // Verifica se o jogador está com arma equipada
             playerHasWeapon = false;
-            if (animator != null && animator.GetBool("isShoot"))
+            if (playerScript.GetComponent<Animator>() != null && playerScript.GetComponent<Animator>().GetBool("isShoot"))
             {
                 playerHasWeapon = true;
                 playerThreatLevel += 5f;
             }
 
-            // Verifica a saúde do jogador
-            float currentPlayerHealth = playerScript.currentHealth;
-            float playerHealthPercentage = (float)currentPlayerHealth / playerScript.maxHealth * 100f;
+            // Verifica a saúde do jogador - usando GetHealth() para acessar a saúde do player
+            // Isso evita o erro CS0122 de acesso a membros privados
+            float currentPlayerHealth = 0f;
+            float playerHealthPercentage = 0f;
+
+            // Verifica se o método GetCurrentHealth existe no Player
+            // Se não existir, você precisará adicionar este método ao script do Player
+            if (playerScript.GetType().GetMethod("GetCurrentHealth") != null)
+            {
+                // Usando reflection para chamar o método de forma segura
+                currentPlayerHealth = (float)playerScript.GetType().GetMethod("GetCurrentHealth").Invoke(playerScript, null);
+                playerHealthPercentage = currentPlayerHealth / playerScript.maxHealth * 100f;
+            }
+            else
+            {
+                // Valor padrão se não conseguir acessar a saúde do player
+                playerHealthPercentage = 50f;
+                Debug.LogWarning("Método GetCurrentHealth não encontrado no Player. Adicione este método ao script do Player.");
+            }
 
             // Se a saúde do jogador diminuiu, ele pode estar vulnerável
             if (playerHealthPercentage < lastPlayerHealthPercentage)
@@ -439,8 +527,7 @@ public class Enemy : MonoBehaviour
 
     void GoToNextPatrolPoint()
     {
-        if (patrolPoints.Count == 0) 
-            return;
+        if (patrolPoints.Count == 0) return;
         agent.SetDestination(patrolPoints[currentPatrolIndex].position);
         currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Count;
     }
@@ -450,20 +537,21 @@ public class Enemy : MonoBehaviour
         if (player == null) return false;
 
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+
+        // Detecção por proximidade - detecta o player apenas por estar próximo
+        // mas verifica se há obstáculos entre o inimigo e o player
         if (distanceToPlayer <= visionRadius)
         {
+            // Direção do inimigo para o player
             Vector3 directionToPlayer = (player.position - transform.position).normalized;
-            float angleToPlayer = Vector3.Angle(transform.forward, directionToPlayer);
 
-            if (angleToPlayer <= visionAngle / 2)
+            // Verifica se há obstáculos entre o inimigo e o player
+            if (!Physics.Raycast(transform.position, directionToPlayer, distanceToPlayer, obstacleLayer))
             {
-                // Verifica se há obstáculos entre o inimigo e o jogador
-                if (!Physics.Raycast(transform.position, directionToPlayer, distanceToPlayer, obstacleLayer))
-                {
-                    return true;
-                }
+                return true;
             }
         }
+
         return false;
     }
 
@@ -630,7 +718,29 @@ public class Enemy : MonoBehaviour
             Player playerHealth = player.GetComponent<Player>();
             if (playerHealth != null)
             {
-                playerHealth.TakeDamage(attackDamage);
+                // Verifica se o método TakeDamage existe no Player
+                // Se não existir, tenta usar TakeDemage (diferença na grafia)
+                if (playerHealth.GetType().GetMethod("TakeDamage") != null)
+                {
+                    playerHealth.GetType().GetMethod("TakeDamage").Invoke(playerHealth, new object[] { attackDamage });
+                }
+                else if (playerHealth.GetType().GetMethod("TakeDemage") != null)
+                {
+                    // Tenta converter para int se necessário (para resolver o erro CS1503)
+                    try
+                    {
+                        playerHealth.GetType().GetMethod("TakeDemage").Invoke(playerHealth, new object[] { (int)attackDamage });
+                    }
+                    catch
+                    {
+                        // Se falhar, tenta com float
+                        playerHealth.GetType().GetMethod("TakeDemage").Invoke(playerHealth, new object[] { attackDamage });
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("Método TakeDamage ou TakeDemage não encontrado no Player. Adicione um destes métodos ao script do Player.");
+                }
 
                 // Aumenta a agressividade após um ataque bem-sucedido
                 aggressiveness += 5f;
