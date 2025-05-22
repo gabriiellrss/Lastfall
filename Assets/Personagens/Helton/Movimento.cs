@@ -89,12 +89,13 @@ public class Player : MonoBehaviour
 
     void Update()
     {
+        if (Time.timeScale == 0f) return; // Jogo está pausado, ignora Update
+
         Move();
         HandleAttack();
         HandleCombo();
         UpdateAnimation();
         pose();
-
     }
 
     void pose()
