@@ -8,13 +8,9 @@ public class CreditosRolar : MonoBehaviour
     private bool rolando = false;
     private Vector2 posInicial;
 
-    void Start()
-    {
-        posInicial = creditosTransform.anchoredPosition;
-    }
-
     void OnEnable()
     {
+        posInicial = creditosTransform.anchoredPosition;
         creditosTransform.anchoredPosition = posInicial;
         rolando = true;
     }
@@ -31,5 +27,7 @@ public class CreditosRolar : MonoBehaviour
             rolando = false;
             gameObject.SetActive(false);
         }
+
+        Debug.Log(creditosTransform.anchoredPosition);
     }
 }
