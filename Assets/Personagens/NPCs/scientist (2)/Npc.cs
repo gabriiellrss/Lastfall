@@ -32,6 +32,10 @@ public class npc : MonoBehaviour
 
     private Coroutine typingCoroutine;
 
+    public Transform alvo;                
+    public Transform objetoParaRotacionar;
+    public float velocidadeRotacao = 5f;   
+
     private void Start()
     {
         npcAnimator = GetComponent<Animator>();
@@ -59,6 +63,8 @@ public class npc : MonoBehaviour
         {
             CloseDialog();
         }
+
+
     }
 
     private void OnTriggerEnter(Collider other)
@@ -70,6 +76,17 @@ public class npc : MonoBehaviour
                 currentPressKeyUI = Instantiate(pressKeyUIPrefab, uiParent);
             }
             isPlayerInZone = true;
+        }
+
+        if (alvo != null && objetoParaRotacionar != null)
+        {
+            Vector3 direcao = alvo.position - objetoParaRotacionar.position;
+
+            // Se quiser que olhe apenas no eixo horizontal, descomente a linha abaixo:
+            // direcao.y = 0;
+
+            Quaternion rotacaoAlvo = Quaternion.LookRotation(direcao);
+            objetoParaRotacionar.rotation = Quaternion.Lerp(objetoParaRotacionar.rotation, rotacaoAlvo, Time.deltaTime * velocidadeRotacao);
         }
     }
 
