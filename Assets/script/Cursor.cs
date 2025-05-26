@@ -6,7 +6,7 @@ public class CursorScript : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (Input.GetKeyDown(KeyCode.F1))
         {
             IsVisible = !IsVisible;
         }

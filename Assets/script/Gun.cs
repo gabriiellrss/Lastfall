@@ -25,6 +25,9 @@ public class Gun : MonoBehaviour
     public Rigidbody playerRb; // Considerar se ainda é necessário se o tiro é sempre para a frente do jogador
     public float recoilForce;
 
+    public AudioSource audioSource;
+    public AudioClip shotClip;
+
     //bools
     bool shooting, reloading;
 
@@ -112,6 +115,8 @@ public class Gun : MonoBehaviour
         dir = (dir + attackPoint.right * x + attackPoint.up * y).normalized;
 
         CinemachineShake.Instance.ShakeCamera(5f, .1f);
+        audioSource.PlayOneShot(shotClip);
+
 
         // ────────── 3. Instancia o projétil ──────────
         GameObject go = Instantiate(bullet, attackPoint.position, Quaternion.LookRotation(dir));

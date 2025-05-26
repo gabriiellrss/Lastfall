@@ -79,7 +79,7 @@ public class WispTextureTools
 
         Texture2D tex = GenerateBorder(w, h, ParamBorderWidth, ParamColor);
 
-        RawImage result = new GameObject("WispBorders").AddComponent<RawImage>();
+         RawImage result = new GameObject("WispBorders").AddComponent<RawImage>();
         result.texture = tex;
 
         RectTransform rt = result.GetComponent<RectTransform>();

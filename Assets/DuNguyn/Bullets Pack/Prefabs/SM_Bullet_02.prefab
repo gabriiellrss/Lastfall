@@ -89,7 +89,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   areaTransform: {fileID: 8210261181187131408}
-  attackRadius: 0.13
+  attackRadius: 1
   attackDamage: 10
   enemyLayer:
     serializedVersion: 2

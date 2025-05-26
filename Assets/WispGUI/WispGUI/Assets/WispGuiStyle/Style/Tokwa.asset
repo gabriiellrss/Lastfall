@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Tokwa
   m_EditorClassIdentifier: 
   styleName: Tokwa
-  Font: {fileID: 11400000, guid: fc14c3d5589ee20488a35689f8cdee35, type: 2}
-  FontSizeNormal: 12
+  Font: {fileID: 11400000, guid: 049aa29b3fda697419d4d08935f1fb93, type: 2}
+  FontSizeNormal: 15
   FontSizeHeader: 18
-  FontSizeLabel: 14
+  FontSizeLabel: 20
   FontSizeQuiet: 10
-  LineColor: {r: 0, g: 0.3019608, b: 0.654902, a: 1}
+  LineColor: {r: 0, g: 0.46107817, b: 1, a: 1}
   horizontalScrollBar: {fileID: 21300000, guid: 40e94b958eddd9841aeb85f3290d4d4c, type: 3}
   horizontalScrollBarHandle: {fileID: 21300000, guid: 40e94b958eddd9841aeb85f3290d4d4c, type: 3}
   verticalScrollBar: {fileID: 21300000, guid: 40e94b958eddd9841aeb85f3290d4d4c, type: 3}
@@ -78,10 +78,10 @@ MonoBehaviour:
     pixelsPerUnitMultiplier: 1
     material: {fileID: 0}
   widget:
-    activeColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
-    activeBackgroundColor: {r: 0.61960787, g: 0.81960785, b: 1, a: 1}
-    inactiveColor: {r: 0, g: 0, b: 0, a: 0.2509804}
-    inactiveBackgroundColor: {r: 1, g: 1, b: 1, a: 0.5019608}
+    activeColor: {r: 1, g: 1, b: 1, a: 1}
+    activeBackgroundColor: {r: 0.61960787, g: 0.81960785, b: 1, a: 0}
+    inactiveColor: {r: 1, g: 1, b: 1, a: 1}
+    inactiveBackgroundColor: {r: 1, g: 1, b: 1, a: 1}
     selectedColor: {r: 1, g: 1, b: 1, a: 1}
     selectedBackgroundColor: {r: 0, g: 0.3019608, b: 0.654902, a: 1}
     graphics: {fileID: 21300000, guid: ad789a5b667ec30469e8fe75edbe331d, type: 3}

@@ -5,7 +5,11 @@ public class Bullet : MonoBehaviour
 {
     Rigidbody rb;
 
-    void Awake() => rb = GetComponent<Rigidbody>();
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
+        Destroy(gameObject, 5f); // Destroi o bullet após 5 segundos
+    }
 
     void FixedUpdate()
     {
