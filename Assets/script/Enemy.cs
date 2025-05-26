@@ -1,5 +1,6 @@
-// EnemyAI_Improved.cs
-// Este script controla o comportamento da Inteligência Artificial do Inimigo com melhorias baseadas no código do player.
+
+// Este script controla o comportamento da Inteligência Artificial do Inimigo.
+// MODIFICADO: Inimigo para de seguir e volta a patrulhar quando o Player morre.
 
 using UnityEngine;
 using UnityEngine.AI;
@@ -92,12 +93,11 @@ public class Enemy : MonoBehaviour
         if (agent == null) agent = GetComponent<NavMeshAgent>();
         if (player == null)
         {
-            // Tenta encontrar o jogador pela tag "Player" se não estiver atribuído
             GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
             if (playerObject != null)
             {
                 player = playerObject.transform;
-                playerScript = playerObject.GetComponent<Player>(); // Obtém referência ao script do Player
+                playerScript = playerObject.GetComponent<Player>();
                 if (playerScript == null)
                 {
                     Debug.LogWarning("Script Player não encontrado no objeto do jogador!");
@@ -107,7 +107,11 @@ public class Enemy : MonoBehaviour
         }
         else
         {
-            playerScript = player.GetComponent<Player>(); // Obtém referência ao script do Player
+            playerScript = player.GetComponent<Player>();
+            if (playerScript == null)
+            {
+                Debug.LogWarning("Script Player não encontrado no objeto do jogador atribuído!");
+            }
         }
 
         currentHealth = maxHealth;
@@ -117,13 +121,19 @@ public class Enemy : MonoBehaviour
 
     void Update()
     {
-        if (isDead || player == null) return; // Não faz nada se estiver morto ou sem referência do jogador
+        // Não faz nada se o inimigo estiver morto ou sem referência do jogador
+        if (isDead || player == null || playerScript == null) return;
 
-        // Atualiza informações do jogador
-        UpdatePlayerInfo();
+        // Atualiza informações do jogador (apenas se ele estiver vivo)
+        if (!playerScript.isDead)
+        {
+            UpdatePlayerInfo();
+        }
 
         // Lógica de transição de estados baseada na detecção e distância
-        bool canSeePlayer = CanSeePlayer();
+        bool isPlayerAlive = !playerScript.isDead;
+        bool canSeePlayer = isPlayerAlive && CanSeePlayer(); // Só pode ver se estiver vivo
+        bool canHearPlayer = isPlayerAlive && CanHearPlayer(); // Só pode ouvir se estiver vivo
         distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
         // Atualiza o timer de ataque
@@ -139,26 +149,36 @@ public class Enemy : MonoBehaviour
             if (dodgeTimer <= 0)
             {
                 isDodging = false;
+                // Volta ao estado anterior (se não era Dead)
                 if (previousState != AIState.Dead)
                 {
-                    ChangeState(previousState);
+                    // Se o player morreu enquanto esquivava, vai para Patrolling
+                    ChangeState(isPlayerAlive ? previousState : AIState.Patrolling);
                 }
             }
             return; // Não faz mais nada enquanto estiver esquivando
         }
 
-        // Lógica de transição de estados
+        // --- LÓGICA DE TRANSIÇÃO DE ESTADOS MODIFICADA ---
         switch (currentState)
         {
             case AIState.Patrolling:
                 Patrol();
-                if (canSeePlayer || CanHearPlayer())
+                // Só persegue se detectar o jogador E ele estiver VIVO
+                if ((canSeePlayer || canHearPlayer) && isPlayerAlive)
                 {
                     ChangeState(AIState.Chasing);
                 }
                 break;
 
             case AIState.Chasing:
+                // Se o jogador MORREU, volta a patrulhar
+                if (!isPlayerAlive)
+                {
+                    ChangeState(AIState.Patrolling);
+                    break;
+                }
+
                 ChasePlayer();
 
                 // Se o jogador estiver atacando e estivermos perto, considere esquivar
@@ -182,7 +202,7 @@ public class Enemy : MonoBehaviour
                     ChangeState(AIState.Retreating);
                 }
                 // Se perder o jogador de vista e estiver longe
-                else if (!canSeePlayer && distanceToPlayer > chaseDistance)
+                else if (!CanSeePlayer() && distanceToPlayer > chaseDistance) // Re-check CanSeePlayer as it depends on isPlayerAlive
                 {
                     lastKnownPlayerPosition = player.position;
                     ChangeState(AIState.Searching);
@@ -190,21 +210,55 @@ public class Enemy : MonoBehaviour
                 break;
 
             case AIState.Searching:
+                // Se o jogador MORREU enquanto procurava, volta a patrulhar
+                if (!isPlayerAlive)
+                {
+                    ChangeState(AIState.Patrolling);
+                    break;
+                }
+
                 SearchForPlayer();
-                if (canSeePlayer || CanHearPlayer())
+                // Se encontrar o jogador (e ele estiver vivo), persegue
+                if ((canSeePlayer || canHearPlayer) && isPlayerAlive)
                 {
                     ChangeState(AIState.Chasing);
                 }
                 break;
 
             case AIState.Attacking:
-                if (!isAttacking)
+                // Se o jogador MORREU durante o ataque, para tudo e volta a patrulhar
+                if (!isPlayerAlive)
+                {
+                    StopCoroutine(nameof(ApplyDamageWithDelay));
+                    StopCoroutine(nameof(ResetAttackState));
+                    isAttacking = false;
+                    if (animator != null) animator.SetBool("isAttacking", false);
+                    // Pode ser necessário resetar o trigger de ataque também
+                    if (animator != null) animator.ResetTrigger("Attack");
+                    ChangeState(AIState.Patrolling);
+                    break;
+                }
+
+                // Se não está no meio de uma animação de ataque, inicia uma
+                if (!isAttacking && attackTimer <= 0)
                 {
                     AttackPlayer();
+                }
+                // Se o ataque terminou (isAttacking é resetado em ResetAttackState) e ainda vê o player, volta a perseguir
+                else if (!isAttacking && isPlayerAlive)
+                {
+                    ChangeState(AIState.Chasing);
                 }
                 break;
 
             case AIState.Flanking:
+                // Se o jogador MORREU, volta a patrulhar
+                if (!isPlayerAlive)
+                {
+                    ChangeState(AIState.Patrolling);
+                    break;
+                }
+
                 FlankPlayer();
                 // Se o jogador estiver atacando e estivermos perto, considere esquivar
                 if (ShouldDodge())
@@ -217,77 +271,85 @@ public class Enemy : MonoBehaviour
                     ChangeState(AIState.Attacking);
                 }
                 // Se perder o jogador de vista
-                else if (!canSeePlayer)
+                else if (!CanSeePlayer()) // Re-check CanSeePlayer
                 {
                     ChangeState(AIState.Chasing);
                 }
                 break;
 
             case AIState.Retreating:
+                // Se o jogador MORREU, volta a patrulhar
+                if (!isPlayerAlive)
+                {
+                    ChangeState(AIState.Patrolling);
+                    break;
+                }
+
                 Retreat();
                 // Se recuperou vida suficiente ou o jogador está muito perto
                 if (currentHealth > maxHealth * 0.5f || distanceToPlayer <= attackRange)
                 {
                     ChangeState(AIState.Chasing);
                 }
+                // Se perder o jogador de vista enquanto recua, pode voltar a patrulhar ou procurar
+                else if (!CanSeePlayer() && distanceToPlayer > chaseDistance * 1.5f)
+                {
+                    ChangeState(AIState.Patrolling);
+                }
                 break;
         }
+        // ----------------------------------------------------
 
-        // Atualiza a lista de posições recentes do jogador
+        // Atualiza a lista de posições recentes do jogador (mesmo se morto, para histórico)
         UpdateRecentPlayerPositions();
     }
 
     void UpdatePlayerInfo()
     {
-        if (playerScript != null)
+        // Esta função agora é chamada apenas se o player está vivo no Update()
+        // Verifica se o jogador está atacando
+        bool isPlayerAttacking = false;
+        // Acessa o Animator do Player diretamente (se possível e seguro)
+        Animator playerAnimator = playerScript.GetComponent<Animator>();
+        if (playerAnimator != null && (playerAnimator.GetBool("isAttacking") || playerAnimator.GetBool("isShooting")))
         {
-            // Verifica se o jogador está atacando
-            bool isPlayerAttacking = false;
-            if (animator != null && animator.GetBool("isAttacking"))
-            {
-                isPlayerAttacking = true;
-                timeSinceLastPlayerAttack = 0f;
-            }
-            else
-            {
-                timeSinceLastPlayerAttack += Time.deltaTime;
-            }
-
-            // Detecta mudança no estado de ataque do jogador
-            if (isPlayerAttacking && !playerWasAttacking)
-            {
-                // Jogador começou a atacar
-                playerThreatLevel += 10f;
-            }
-            playerWasAttacking = isPlayerAttacking;
-
-            // Verifica se o jogador está com arma equipada
-            playerHasWeapon = false;
-            if (animator != null && animator.GetBool("isShoot"))
-            {
-                playerHasWeapon = true;
-                playerThreatLevel += 5f;
-            }
-
-            // Verifica a saúde do jogador
-            float currentPlayerHealth = playerScript.currentHealth;
-            float playerHealthPercentage = (float)currentPlayerHealth / playerScript.maxHealth * 100f;
-
-            // Se a saúde do jogador diminuiu, ele pode estar vulnerável
-            if (playerHealthPercentage < lastPlayerHealthPercentage)
-            {
-                aggressiveness += 5f;
-            }
-            lastPlayerHealthPercentage = playerHealthPercentage;
-
-            // Limita os valores
-            playerThreatLevel = Mathf.Clamp(playerThreatLevel, 0f, 100f);
-            aggressiveness = Mathf.Clamp(aggressiveness, 0f, 100f);
-
-            // Decai o nível de ameaça com o tempo
-            playerThreatLevel -= Time.deltaTime * 2f;
-            if (playerThreatLevel < 0f) playerThreatLevel = 0f;
+            isPlayerAttacking = true;
+            timeSinceLastPlayerAttack = 0f;
         }
+        else
+        {
+            timeSinceLastPlayerAttack += Time.deltaTime;
+        }
+
+        // Detecta mudança no estado de ataque do jogador
+        if (isPlayerAttacking && !playerWasAttacking)
+        {
+            playerThreatLevel += 10f;
+        }
+        playerWasAttacking = isPlayerAttacking;
+
+        // Verifica se o jogador está com arma equipada
+        playerHasWeapon = false;
+        if (playerAnimator != null && playerAnimator.GetBool("isShoot"))
+        {
+            playerHasWeapon = true;
+            playerThreatLevel += 5f;
+        }
+
+        // Verifica a saúde do jogador
+        float currentPlayerHealth = playerScript.currentHealth;
+        float playerHealthPercentage = (float)currentPlayerHealth / playerScript.maxHealth * 100f;
+
+        if (playerHealthPercentage < lastPlayerHealthPercentage)
+        {
+            aggressiveness += 5f;
+        }
+        lastPlayerHealthPercentage = playerHealthPercentage;
+
+        playerThreatLevel = Mathf.Clamp(playerThreatLevel, 0f, 100f);
+        aggressiveness = Mathf.Clamp(aggressiveness, 0f, 100f);
+        playerThreatLevel -= Time.deltaTime * 2f;
+        if (playerThreatLevel < 0f) playerThreatLevel = 0f;
     }
 
     void UpdateRecentPlayerPositions()
@@ -296,22 +358,22 @@ public class Enemy : MonoBehaviour
         if (positionUpdateTimer >= positionUpdateInterval)
         {
             positionUpdateTimer = 0f;
-            recentPlayerPositions.Add(player.position);
-
-            // Mantém apenas as últimas 5 posições
-            if (recentPlayerPositions.Count > 5)
+            if (player != null) // Adiciona verificação de null para player
             {
-                recentPlayerPositions.RemoveAt(0);
+                recentPlayerPositions.Add(player.position);
+                if (recentPlayerPositions.Count > 5)
+                {
+                    recentPlayerPositions.RemoveAt(0);
+                }
             }
         }
     }
 
     Vector3 PredictPlayerPosition(float timeAhead)
     {
-        if (recentPlayerPositions.Count < 2)
-            return player.position;
+        if (player == null || recentPlayerPositions.Count < 2)
+            return player != null ? player.position : transform.position; // Retorna posição atual se não puder prever
 
-        // Calcula a velocidade média do jogador com base nas posições recentes
         Vector3 averageVelocity = Vector3.zero;
         for (int i = 1; i < recentPlayerPositions.Count; i++)
         {
@@ -319,96 +381,120 @@ public class Enemy : MonoBehaviour
         }
         averageVelocity /= (recentPlayerPositions.Count - 1);
 
-        // Prevê a posição futura
         return player.position + averageVelocity * timeAhead;
     }
 
     bool ShouldDodge()
     {
-        // Esquiva se o jogador estiver atacando e estivermos perto
-        if (playerWasAttacking && distanceToPlayer < attackRange * 1.5f && timeSinceLastPlayerAttack < 0.5f)
+        // Só esquiva se o jogador estiver vivo e atacando
+        if (playerScript != null && !playerScript.isDead && playerWasAttacking && distanceToPlayer < attackRange * 1.5f && timeSinceLastPlayerAttack < 0.5f)
         {
-            return Random.value < 0.7f; // 70% de chance de esquivar
+            return Random.value < 0.7f;
         }
         return false;
     }
 
     bool ShouldFlank()
     {
-        // Flanqueia se o jogador estiver com pouca vida ou se estivermos com muita vida
-        if ((lastPlayerHealthPercentage < 30f || currentHealth > maxHealth * 0.7f) &&
+        // Só flanqueia se o jogador estiver vivo
+        if (playerScript != null && !playerScript.isDead &&
+            (lastPlayerHealthPercentage < 30f || currentHealth > maxHealth * 0.7f) &&
             distanceToPlayer < flankDistance && distanceToPlayer > attackRange)
         {
-            return Random.value < 0.6f; // 60% de chance de flanquear
+            return Random.value < 0.6f;
         }
         return false;
     }
 
     bool ShouldRetreat()
     {
-        // Recua se estivermos com pouca vida e o jogador estiver com muita
-        if (currentHealth < maxHealth * 0.3f && lastPlayerHealthPercentage > 50f)
+        // Só recua se o jogador estiver vivo
+        if (playerScript != null && !playerScript.isDead &&
+            currentHealth < maxHealth * 0.3f && lastPlayerHealthPercentage > 50f)
         {
-            return Random.value < 0.7f; // 70% de chance de recuar
+            return Random.value < 0.7f;
         }
         return false;
     }
 
     void ChangeState(AIState newState)
     {
-        if (currentState == newState) return;
+        if (currentState == newState && currentState != AIState.Patrolling) return; // Permite re-entrar em Patrolling
 
-        previousState = currentState;
+        // Guarda o estado anterior apenas se não for Dead
+        if (currentState != AIState.Dead)
+        {
+            previousState = currentState;
+        }
         currentState = newState;
 
         // Reset de parâmetros de animação
         if (animator != null)
         {
             animator.SetBool("isWalking", false);
-            animator.SetBool("isAttacking", false);
+            // Não reseta isAttacking aqui, pois é controlado no estado Attacking
+            // animator.SetBool("isAttacking", false);
         }
 
+        // Configurações específicas para cada estado
         switch (currentState)
         {
             case AIState.Patrolling:
                 agent.speed = patrolSpeed;
+                agent.isStopped = false; // Garante que o agente pode se mover
                 if (animator != null) animator.SetBool("isWalking", true);
+                // Se estava esperando em um ponto, cancela e vai para o próximo
+                if (waitingAtPatrolPoint)
+                {
+                    StopCoroutine(nameof(WaitAtPatrolPoint));
+                    waitingAtPatrolPoint = false;
+                }
                 GoToNextPatrolPoint();
                 break;
 
             case AIState.Chasing:
                 agent.speed = chaseSpeed;
+                agent.isStopped = false;
                 if (animator != null) animator.SetBool("isWalking", true);
                 break;
 
             case AIState.Searching:
                 agent.speed = patrolSpeed;
+                agent.isStopped = false;
                 currentSearchTime = 0f;
-                agent.SetDestination(lastKnownPlayerPosition);
+                // Vai para a última posição conhecida apenas se o jogador estava vivo recentemente
+                if (player != null) // Verifica se player ainda existe
+                {
+                    agent.SetDestination(lastKnownPlayerPosition);
+                }
+                else
+                {
+                    ChangeState(AIState.Patrolling); // Se player sumiu, patrulha
+                }
                 if (animator != null) animator.SetBool("isWalking", true);
                 break;
 
             case AIState.Attacking:
-                agent.SetDestination(transform.position); // Para de andar
-                if (animator != null)
-                {
-                    animator.SetBool("isAttacking", true);
-                    animator.SetTrigger("Attack");
-                }
+                agent.isStopped = true; // Para de andar para atacar
+                agent.velocity = Vector3.zero; // Zera a velocidade imediatamente
+                // Animação é controlada dentro do estado Attacking
                 break;
 
             case AIState.Flanking:
-                agent.speed = chaseSpeed * 1.2f; // Mais rápido ao flanquear
+                agent.speed = chaseSpeed * 1.2f;
+                agent.isStopped = false;
                 if (animator != null) animator.SetBool("isWalking", true);
                 break;
 
             case AIState.Retreating:
-                agent.speed = chaseSpeed * 1.1f; // Ligeiramente mais rápido ao recuar
+                agent.speed = chaseSpeed * 1.1f;
+                agent.isStopped = false;
                 if (animator != null) animator.SetBool("isWalking", true);
                 break;
 
             case AIState.Dodging:
                 agent.speed = dodgeSpeed;
+                agent.isStopped = false;
                 if (animator != null) animator.SetTrigger("Dodge");
                 break;
 
@@ -423,45 +509,94 @@ public class Enemy : MonoBehaviour
     {
         if (patrolPoints.Count == 0) return;
 
+        // Se chegou ao destino e não está esperando, começa a esperar
         if (!agent.pathPending && agent.remainingDistance < 0.5f && !waitingAtPatrolPoint)
         {
             waitingAtPatrolPoint = true;
+            agent.isStopped = true; // Para enquanto espera
+            agent.velocity = Vector3.zero;
+            if (animator != null) animator.SetBool("isWalking", false); // Para animação de andar
             StartCoroutine(WaitAtPatrolPoint());
+        }
+        // Garante que está andando se não chegou ou não está esperando
+        else if (!waitingAtPatrolPoint && agent.hasPath)
+        {
+            if (animator != null) animator.SetBool("isWalking", true);
         }
     }
 
     IEnumerator WaitAtPatrolPoint()
     {
         yield return new WaitForSeconds(patrolWaitTime);
-        GoToNextPatrolPoint();
         waitingAtPatrolPoint = false;
+        agent.isStopped = false; // Libera para mover
+        if (animator != null) animator.SetBool("isWalking", true); // Volta a andar
+        GoToNextPatrolPoint();
     }
 
     void GoToNextPatrolPoint()
     {
-        if (patrolPoints.Count == 0)
-            return;
-        agent.SetDestination(patrolPoints[currentPatrolIndex].position);
-        currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Count;
+        if (patrolPoints.Count == 0) return;
+
+        // Garante que o agente não está parado
+        agent.isStopped = false;
+
+        // Define o próximo ponto de patrulha
+        int attempts = 0;
+        int maxAttempts = patrolPoints.Count;
+        do
+        {
+            currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Count;
+            attempts++;
+        } while (patrolPoints[currentPatrolIndex] == null && attempts < maxAttempts);
+
+        if (patrolPoints[currentPatrolIndex] != null)
+        {
+            agent.SetDestination(patrolPoints[currentPatrolIndex].position);
+            if (animator != null) animator.SetBool("isWalking", true);
+        }
+        else
+        {
+            Debug.LogWarning("Todos os pontos de patrulha são nulos ou inválidos.");
+            // Fica parado ou volta para um estado padrão?
+            // Por enquanto, apenas loga o aviso.
+        }
     }
 
     bool CanSeePlayer()
     {
+        // A checagem de isPlayerAlive já é feita no Update antes de chamar esta função
         if (player == null) return false;
 
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-        if (distanceToPlayer <= visionRadius)
+        float currentDistance = Vector3.Distance(transform.position, player.position);
+        if (currentDistance <= visionRadius)
         {
             Vector3 directionToPlayer = (player.position - transform.position).normalized;
             float angleToPlayer = Vector3.Angle(transform.forward, directionToPlayer);
 
             if (angleToPlayer <= visionAngle / 2)
             {
-                // Verifica se há obstáculos entre o inimigo e o jogador
-                if (!Physics.Raycast(transform.position, directionToPlayer, distanceToPlayer, obstacleLayer))
+                // Define pontos de origem (olhos do inimigo) e alvo (centro do jogador)
+                Vector3 eyePosition = transform.position + Vector3.up * 1.6f; // Ajuste a altura conforme necessário
+                Vector3 targetCenter = player.position + Vector3.up * 1.0f; // Mira no centro do corpo do jogador
+
+                // Calcula a nova direção e distância a partir dos olhos para o centro do jogador
+                Vector3 directionToTargetCenter = (targetCenter - eyePosition).normalized;
+                float distanceToTargetCenter = Vector3.Distance(eyePosition, targetCenter);
+
+                // Verifica se há obstáculos entre os olhos e o centro do jogador
+                // Nota: Usamos distanceToTargetCenter como distância máxima do raycast
+                RaycastHit hit;
+                if (!Physics.Raycast(eyePosition, directionToTargetCenter, out hit, distanceToTargetCenter, obstacleLayer))
                 {
+                    // Se não atingiu nenhum obstáculo na layer de obstáculos, considera visível
                     return true;
                 }
+                // Opcional: Adicionar uma verificação se o hit.collider é o próprio jogador,
+                // caso a layer do jogador não esteja na obstacleLayer.
+                // else if (hit.collider != null && hit.collider.transform == player) {
+                //     return true; // Atingiu o jogador diretamente
+                // }
             }
         }
         return false;
@@ -469,19 +604,19 @@ public class Enemy : MonoBehaviour
 
     bool CanHearPlayer()
     {
+        // A checagem de isPlayerAlive já é feita no Update antes de chamar esta função
         if (player == null) return false;
 
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+        float currentDistance = Vector3.Distance(transform.position, player.position);
 
-        // Pode ouvir o jogador se ele estiver atacando ou atirando
-        if (distanceToPlayer <= hearingRadius)
+        if (currentDistance <= hearingRadius)
         {
+            // Considera ouvir se o jogador estava atacando recentemente
             if (playerWasAttacking || (playerHasWeapon && timeSinceLastPlayerAttack < 1.0f))
             {
                 return true;
             }
         }
-
         return false;
     }
 
@@ -489,7 +624,6 @@ public class Enemy : MonoBehaviour
     {
         if (player != null)
         {
-            // Persegue a posição prevista do jogador em vez da atual
             Vector3 targetPosition = PredictPlayerPosition(0.5f);
             agent.SetDestination(targetPosition);
         }
@@ -499,17 +633,11 @@ public class Enemy : MonoBehaviour
     {
         if (player == null) return;
 
-        // Calcula uma posição para flanquear o jogador
         Vector3 directionToPlayer = (player.position - transform.position).normalized;
-
-        // Rotaciona a direção para a esquerda ou direita com base na posição atual
         float side = (Vector3.Dot(transform.right, directionToPlayer) > 0) ? -1 : 1;
         Vector3 flankDirection = Quaternion.Euler(0, side * flankAngle, 0) * directionToPlayer;
-
-        // Calcula a posição de flanqueamento
         Vector3 flankPosition = player.position + flankDirection * flankDistance;
 
-        // Verifica se a posição é válida no NavMesh
         NavMeshHit hit;
         if (NavMesh.SamplePosition(flankPosition, out hit, 5f, NavMesh.AllAreas))
         {
@@ -517,7 +645,6 @@ public class Enemy : MonoBehaviour
         }
         else
         {
-            // Se não for válida, volta para perseguição normal
             ChasePlayer();
         }
     }
@@ -526,11 +653,9 @@ public class Enemy : MonoBehaviour
     {
         if (player == null) return;
 
-        // Calcula uma direção oposta ao jogador
         Vector3 retreatDirection = (transform.position - player.position).normalized;
         Vector3 retreatPosition = transform.position + retreatDirection * 10f;
 
-        // Verifica se a posição é válida no NavMesh
         NavMeshHit hit;
         if (NavMesh.SamplePosition(retreatPosition, out hit, 10f, NavMesh.AllAreas))
         {
@@ -538,14 +663,13 @@ public class Enemy : MonoBehaviour
         }
         else
         {
-            // Se não for válida, tenta encontrar um ponto de patrulha distante
             if (patrolPoints.Count > 0)
             {
                 Transform furthestPoint = null;
                 float maxDistance = 0f;
-
                 foreach (Transform point in patrolPoints)
                 {
+                    if (point == null) continue;
                     float dist = Vector3.Distance(player.position, point.position);
                     if (dist > maxDistance)
                     {
@@ -553,7 +677,6 @@ public class Enemy : MonoBehaviour
                         furthestPoint = point;
                     }
                 }
-
                 if (furthestPoint != null)
                 {
                     agent.SetDestination(furthestPoint.position);
@@ -568,28 +691,32 @@ public class Enemy : MonoBehaviour
 
         isDodging = true;
         dodgeTimer = dodgeDuration;
-        previousState = currentState;
+        // Guarda o estado atual ANTES de mudar para Dodging
+        // previousState = currentState; // Já é feito no Update
         ChangeState(AIState.Dodging);
 
-        // Calcula uma direção de esquiva perpendicular à direção do jogador
         Vector3 directionToPlayer = (player.position - transform.position).normalized;
-        float side = (Random.value > 0.5f) ? 1f : -1f; // Esquiva para esquerda ou direita aleatoriamente
+        float side = (Random.value > 0.5f) ? 1f : -1f;
         dodgeDirection = Quaternion.Euler(0, side * 90f, 0) * directionToPlayer;
-
-        // Aplica o movimento de esquiva
         Vector3 dodgePosition = transform.position + dodgeDirection * 3f;
 
-        // Verifica se a posição é válida no NavMesh
         NavMeshHit hit;
         if (NavMesh.SamplePosition(dodgePosition, out hit, 3f, NavMesh.AllAreas))
         {
             agent.SetDestination(hit.position);
+        }
+        // Se não encontrar posição válida, cancela a esquiva
+        else
+        {
+            isDodging = false;
+            ChangeState(previousState); // Volta ao estado anterior
         }
     }
 
     void SearchForPlayer()
     {
         currentSearchTime += Time.deltaTime;
+        // Se o tempo de busca acabou OU chegou ao destino da busca
         if (currentSearchTime >= searchTime || (!agent.pathPending && agent.remainingDistance < 0.5f))
         {
             ChangeState(AIState.Patrolling);
@@ -598,24 +725,24 @@ public class Enemy : MonoBehaviour
 
     void AttackPlayer()
     {
-        if (attackTimer > 0) return;
-
+        // attackTimer já foi verificado no Update
         isAttacking = true;
         attackTimer = attackCooldown;
 
-        // Olha para o jogador antes de atacar
-        transform.LookAt(new Vector3(player.position.x, transform.position.y, player.position.z));
+        // Olha para o jogador
+        if (player != null)
+        {
+            transform.LookAt(new Vector3(player.position.x, transform.position.y, player.position.z));
+        }
 
-        // Inicia a animação de ataque
         if (animator != null)
         {
+            animator.SetBool("isWalking", false); // Garante que não está andando
+            animator.SetBool("isAttacking", true);
             animator.SetTrigger("Attack");
         }
 
-        // Aplica dano ao jogador após um pequeno delay para sincronizar com a animação
         StartCoroutine(ApplyDamageWithDelay(0.5f));
-
-        // Reseta o estado após a duração da animação
         StartCoroutine(ResetAttackState());
     }
 
@@ -623,18 +750,12 @@ public class Enemy : MonoBehaviour
     {
         yield return new WaitForSeconds(delay);
 
-        // Verifica se o jogador ainda está ao alcance
-        if (player != null && Vector3.Distance(transform.position, player.position) <= attackRange * 1.2f)
+        // Verifica se ainda está atacando e se o player está vivo e ao alcance
+        if (isAttacking && player != null && playerScript != null && !playerScript.isDead &&
+            Vector3.Distance(transform.position, player.position) <= attackRange * 1.2f)
         {
-            // Aplica dano ao jogador
-            Player playerHealth = player.GetComponent<Player>();
-            if (playerHealth != null)
-            {
-                playerHealth.TakeDamage(attackDamage);
-
-                // Aumenta a agressividade após um ataque bem-sucedido
-                aggressiveness += 5f;
-            }
+            playerScript.TakeDamage(attackDamage);
+            aggressiveness += 5f;
         }
     }
 
@@ -642,9 +763,11 @@ public class Enemy : MonoBehaviour
     {
         yield return new WaitForSeconds(attackAnimationDuration);
         isAttacking = false;
+        if (animator != null) animator.SetBool("isAttacking", false);
 
-        // Volta para perseguição após o ataque
-        ChangeState(AIState.Chasing);
+        // Decide o próximo estado APENAS se não foi interrompido (ex: player morreu)
+        // A transição agora é feita no Update, verificando isAttacking e isPlayerAlive
+        // ChangeState(AIState.Chasing); // Removido daqui
     }
 
     public void TakeDemage(float amount)
@@ -653,21 +776,12 @@ public class Enemy : MonoBehaviour
 
         currentHealth -= amount;
         consecutiveHits++;
-
-        // Aumenta o nível de ameaça do jogador quando sofremos dano
         playerThreatLevel += amount / 5f;
+        if (amount > 20f) aggressiveness -= 10f;
 
-        // Reduz a agressividade quando sofre muito dano
-        if (amount > 20f)
-        {
-            aggressiveness -= 10f;
-        }
-
-        if (animator != null) animator.SetTrigger("Damage"); // animação de levar dano
-
+        if (animator != null) animator.SetTrigger("Damage");
         editBarHealth(currentHealth, maxHealth);
 
-        // Considera esquivar após receber dano
         if (!isDodging && Random.value < 0.4f && currentState != AIState.Attacking)
         {
             DodgeAttack();
@@ -683,61 +797,74 @@ public class Enemy : MonoBehaviour
     {
         isDead = true;
         ChangeState(AIState.Dead);
-        agent.isStopped = true; // Para o NavMeshAgent
-
-        // Desativa o collider
+        agent.isStopped = true;
         GetComponent<Collider>().enabled = false;
+        if (OnEnemyDied != null) OnEnemyDied();
 
-        // Dispara o evento de morte
-        if (OnEnemyDied != null)
+        // Inicia respawn OU destruição
+        if (respawnPoints != null && respawnPoints.Count > 0)
         {
-            OnEnemyDied();
+            StartCoroutine(Respawn());
         }
-
-        StartCoroutine(EsperarEDestruir(mutantObject));
+        else if (mutantObject != null)
+        {
+            StartCoroutine(EsperarEDestruir(mutantObject));
+        }
+        else
+        {
+            // Se não tem respawn nem objeto para destruir, apenas desativa
+            gameObject.SetActive(false);
+            // Ou Destroy(gameObject, 4f); // Destroi após um tempo
+        }
     }
 
-    IEnumerator EsperarEDestruir(GameObject MutantObject)
+    // Coroutine para destruir o objeto (se não houver respawn)
+    IEnumerator EsperarEDestruir(GameObject objToDestroy)
     {
         yield return new WaitForSeconds(4f);
-        Destroy(MutantObject);
+        Destroy(objToDestroy);
     }
 
+    // Coroutine para renascer (se houver pontos de respawn)
     IEnumerator Respawn()
     {
         yield return new WaitForSeconds(respawnDelay);
 
-        if (respawnPoints.Count > 0)
+        int respawnIndex = Random.Range(0, respawnPoints.Count);
+        // Garante que o ponto de respawn escolhido não seja nulo
+        int attempts = 0;
+        while (respawnPoints[respawnIndex] == null && attempts < respawnPoints.Count)
         {
-            int respawnIndex = Random.Range(0, respawnPoints.Count);
+            respawnIndex = (respawnIndex + 1) % respawnPoints.Count;
+            attempts++;
+        }
+
+        if (respawnPoints[respawnIndex] != null)
+        {
             transform.position = respawnPoints[respawnIndex].position;
-            agent.Warp(respawnPoints[respawnIndex].position); // Importante para NavMeshAgent
+            agent.Warp(respawnPoints[respawnIndex].position);
         }
         else
         {
-            Debug.LogWarning("Nenhum ponto de respawn definido para " + gameObject.name + ". Reaparecendo na posição original de morte.");
+            Debug.LogWarning("Nenhum ponto de respawn válido encontrado para " + gameObject.name + ". Reaparecendo na posição de morte.");
+            // Tenta reaparecer onde morreu, mas pode ser problemático se morreu em local inválido
         }
 
-        // Reativa o inimigo
         GetComponent<Collider>().enabled = true;
-
         currentHealth = maxHealth;
+        editBarHealth(currentHealth, maxHealth);
         isDead = false;
         agent.isStopped = false;
         consecutiveHits = 0;
         playerThreatLevel = 0f;
         aggressiveness = 50f;
-        ChangeState(AIState.Patrolling); // Volta a patrulhar após reaparecer
+        ChangeState(AIState.Patrolling);
     }
 
-    // Gizmos para visualização no Editor do Unity
     void OnDrawGizmosSelected()
     {
-        // Campo de Visão
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, visionRadius);
-
-        // Campo de Audição
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, hearingRadius);
 
@@ -749,19 +876,19 @@ public class Enemy : MonoBehaviour
 
         if (player != null)
         {
-            Gizmos.color = CanSeePlayer() ? Color.green : Color.red;
-            Gizmos.DrawLine(transform.position, player.position);
+            // Gizmo de linha só desenha se o player estiver vivo
+            if (playerScript != null && !playerScript.isDead)
+            {
+                Gizmos.color = CanSeePlayer() ? Color.green : Color.red;
+                Gizmos.DrawLine(transform.position, player.position);
+            }
         }
 
-        // Raio de Ataque
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
-
-        // Raio de Flanqueamento
-        Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f); // Laranja semi-transparente
+        Gizmos.color = new Color(1f, 0.5f, 0f, 0.5f);
         Gizmos.DrawWireSphere(transform.position, flankDistance);
 
-        // Pontos de Patrulha
         if (patrolPoints != null && patrolPoints.Count > 0)
         {
             Gizmos.color = Color.cyan;
@@ -770,13 +897,10 @@ public class Enemy : MonoBehaviour
                 if (patrolPoints[i] != null)
                 {
                     Gizmos.DrawSphere(patrolPoints[i].position, 0.3f);
-                    if (i < patrolPoints.Count - 1 && patrolPoints[i + 1] != null)
+                    int nextIndex = (i + 1) % patrolPoints.Count;
+                    if (patrolPoints[nextIndex] != null)
                     {
-                        Gizmos.DrawLine(patrolPoints[i].position, patrolPoints[i + 1].position);
-                    }
-                    else if (patrolPoints.Count > 1 && patrolPoints[0] != null) // Linha do último para o primeiro
-                    {
-                        Gizmos.DrawLine(patrolPoints[i].position, patrolPoints[0].position);
+                        Gizmos.DrawLine(patrolPoints[i].position, patrolPoints[nextIndex].position);
                     }
                 }
             }
@@ -791,3 +915,4 @@ public class Enemy : MonoBehaviour
         }
     }
 }
+

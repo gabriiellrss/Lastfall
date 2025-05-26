@@ -148,7 +148,7 @@ public class npc : MonoBehaviour
 
     IEnumerator TypeLine(string line)
     {
-        dialogText.text = "";
+        dialogText.text = "Ola, vc deve ter acordado agora, é uma pena que não tenha muito tempo para fala com, cof cof";
         isTyping = true;
 
         foreach (char letter in line.ToCharArray())
