@@ -1,17 +1,8 @@
 fileFormatVersion: 2
-guid: c2000361c9ceb407da602cc3699b8e53
+guid: d3c4c47e7f16b1649b56ee0af018d111
 NativeFormatImporter:
   externalObjects: {}
-  mainObjectFileID: 11400000
+  mainObjectFileID: 0
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 290230
-  packageName: Projectile Factory for AAA Stylized Projectiles Vol. 1 by HOVL Studio
-  packageVersion: 1.0
-  assetPath: Assets/InfinityPBR - Magic Pig Games/Projectile Factory/Asset Store
-    Integrations/AAA Stylized Projectiles Vol.1/Data Objects/Spawn Behavior Modification/AAA
-    Projectiles Vol 1 - Muzzle 17 nova violet.asset
-  uploadId: 677415
