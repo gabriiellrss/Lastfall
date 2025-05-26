@@ -108,6 +108,12 @@ public class Player : MonoBehaviour
     private Quaternion spineOriginalRotation;
     private bool isStopped = false;
 
+    // --- NOVAS VARIÁVEIS PARA RENASCIMENTO ---
+    public bool isDead = false;
+    public float respawnDelay = 10f; // Tempo para renascer
+    private Vector3 initialPosition; // Posição inicial para renascer
+    // -----------------------------------------
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
@@ -146,6 +152,9 @@ public class Player : MonoBehaviour
             Debug.LogWarning("Spine Transform não atribuído!");
         }
         wasGrounded = controller.isGrounded;
+
+        initialPosition = transform.position;
+
     }
 
     public void editBarHealth(float vidaAtual, float vidaMaxima)
@@ -155,6 +164,8 @@ public class Player : MonoBehaviour
 
     void Update()
     {
+        if (Time.timeScale == 0f) return; // Jogo está pausado, ignora Update
+
         if (isStopped)
         {
             if (anim != null)
@@ -489,7 +500,7 @@ public class Player : MonoBehaviour
         yield return new WaitForSeconds(time);
         if (attackEffectPrefab != null && effectSpawnPoint != null)
         {
-            Instantiate(attackEffectPrefab, effectSpawnPoint.position, effectSpawnPoint.rotation);
+            //Instantiate(attackEffectPrefab, effectSpawnPoint.position, effectSpawnPoint.rotation);
         }
     }
 
@@ -643,10 +654,16 @@ public class Player : MonoBehaviour
 
     private void Die()
     {
-        if (anim != null) anim.SetTrigger("Die");
+        if(isDead == false)
+        {
+            anim.SetTrigger("Die");
+            isDead = true;
+        }
         PlaySound(deathClip);
         StopPlayer(true);
         controller.enabled = false;
+        StartCoroutine(RespawnCoroutine());
+
     }
 
     private void PlaySound(AudioClip clip, bool loop = false)
@@ -667,5 +684,58 @@ public class Player : MonoBehaviour
             }
         }
     }
+
+    IEnumerator RespawnCoroutine()
+    {
+        Debug.Log("Jogador morreu. Renascendo em " + respawnDelay + " segundos...");
+        yield return new WaitForSeconds(respawnDelay);
+        Debug.Log("Renascendo jogador...");
+
+        // Reseta a vida
+        currentHealth = maxHealth;
+        editBarHealth(currentHealth, maxHealth);
+
+        // Reseta a posição (IMPORTANTE: controller deve estar desativado)
+        transform.position = initialPosition;
+
+        // Reseta velocidade e estado de pulo
+        verticalVelocity = 0f;
+        moveDirection = Vector3.zero;
+        isJumping = false;
+        canDoubleJump = true; // Permite pular após renascer
+
+        // Reseta estados de ataque e combos
+        isAttacking = false;
+        bufferedAttack1 = false;
+        bufferedAttack2 = false;
+        currentCombo1 = 0;
+        currentCombo2 = 0;
+        comboTimer1 = 0f;
+        comboTimer2 = 0f;
+
+        // Reativa o controle
+        if (controller != null) controller.enabled = true;
+
+        // Opcional: Reativar componentes visuais
+        // foreach (Renderer rend in GetComponentsInChildren<Renderer>())
+        // { rend.enabled = true; }
+
+        // Reseta o estado da animação
+        if (anim != null)
+        {
+            anim.ResetTrigger("Die");
+            anim.ResetTrigger("Damage");
+            // Pode ser necessário forçar um estado Idle ou similar
+            anim.Play("Idle"); // Substitua "Idle" pelo nome do seu estado de animação padrão
+            anim.SetBool("isAttacking", false);
+            anim.SetBool("isShooting", false);
+            // Garanta que outros bools/triggers estejam no estado correto
+        }
+
+        // Marca como vivo novamente
+        isDead = false;
+        Debug.Log("Jogador renasceu.");
+    }
+
 }
 

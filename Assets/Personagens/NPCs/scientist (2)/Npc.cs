@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using TMPro;
+using static Unity.Burst.Intrinsics.X86.Avx;
 
 public class npc : MonoBehaviour
 {
@@ -32,9 +33,6 @@ public class npc : MonoBehaviour
 
     private Coroutine typingCoroutine;
 
-    public Transform alvo;                
-    public Transform objetoParaRotacionar;
-    public float velocidadeRotacao = 5f;   
 
     private void Start()
     {
@@ -74,21 +72,17 @@ public class npc : MonoBehaviour
             if (currentPressKeyUI == null)
             {
                 currentPressKeyUI = Instantiate(pressKeyUIPrefab, uiParent);
+
+                TextMeshProUGUI tmp = currentPressKeyUI.GetComponentInChildren<TextMeshProUGUI>();
+                if (tmp != null)
+                {
+                    tmp.text = "Interagir";
+                }
             }
             isPlayerInZone = true;
         }
-
-        if (alvo != null && objetoParaRotacionar != null)
-        {
-            Vector3 direcao = alvo.position - objetoParaRotacionar.position;
-
-            // Se quiser que olhe apenas no eixo horizontal, descomente a linha abaixo:
-            // direcao.y = 0;
-
-            Quaternion rotacaoAlvo = Quaternion.LookRotation(direcao);
-            objetoParaRotacionar.rotation = Quaternion.Lerp(objetoParaRotacionar.rotation, rotacaoAlvo, Time.deltaTime * velocidadeRotacao);
-        }
     }
+
 
     private void OnTriggerExit(Collider other)
     {
@@ -113,8 +107,7 @@ public class npc : MonoBehaviour
         isCanvasOpen = true;
 
         npcAnimator?.SetBool("isTalking", true); // Ativa animação de fala
-        if (currentPressKeyUI != null)
-            Destroy(currentPressKeyUI);
+
 
         ShowLine();
     }
@@ -138,12 +131,23 @@ public class npc : MonoBehaviour
                 StopCoroutine(typingCoroutine);
 
             typingCoroutine = StartCoroutine(TypeLine(dialogLines[currentLineIndex]));
+
+            if (currentPressKeyUI != null)
+            {
+                TextMeshProUGUI tmp = currentPressKeyUI.GetComponentInChildren<TextMeshProUGUI>();
+                if (tmp != null)
+                {
+                    tmp.text = (currentLineIndex == dialogLines.Length - 1) ? "Fechar" : "Avançar";
+                }
+            }
         }
     }
+
 
     void NextLine()
     {
         currentLineIndex++;
+
         if (currentLineIndex < dialogLines.Length)
         {
             ShowLine();
