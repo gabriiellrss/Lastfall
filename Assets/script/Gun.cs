@@ -19,7 +19,7 @@ public class Gun : MonoBehaviour
     public int magazineSize, bulletsPerTap;
     public bool allowButtonHold;
 
-    int bulletsLeft, bulletsShot;
+    public int bulletsLeft, bulletsShot;
 
     //Recoil
     public Rigidbody playerRb; // Considerar se ainda é necessário se o tiro é sempre para a frente do jogador
