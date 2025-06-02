@@ -1,7 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
-using UnityEngine.Video;
 using System.Collections;
 
 public class StartScene : MonoBehaviour
@@ -10,12 +8,14 @@ public class StartScene : MonoBehaviour
     public float fadeDuration = 1f;
     public float waitTime = 2f;
     public Player player;
+    public GameObject textoParaHabilitar; 
 
     void Start()
     {
         player.StopPlayer(true);
         fadeImage.gameObject.SetActive(true);
         fadeImage.color = new Color(0, 0, 0, 1);
+        textoParaHabilitar.SetActive(false); 
         StartCoroutine(FadeSequence());
     }
 
@@ -35,8 +35,18 @@ public class StartScene : MonoBehaviour
         fadeImage.color = new Color(0, 0, 0, 0);
         fadeImage.gameObject.SetActive(false);
 
+        textoParaHabilitar.SetActive(true); 
+
+        StartCoroutine(DisableTextAfterDelay(20f));
+
         yield return new WaitForSeconds(1f);
 
         player.StopPlayer(false);
+    }
+
+    IEnumerator DisableTextAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        textoParaHabilitar.SetActive(false); 
     }
 }
