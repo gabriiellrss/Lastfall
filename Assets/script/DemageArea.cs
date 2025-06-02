@@ -8,7 +8,7 @@ public class DamageArea : MonoBehaviour
     {
         if (other.CompareTag("Enemy") && other.TryGetComponent(out Enemy enemy))
         {
-            enemy.TakeDemage(attackDamage);
+            enemy.TakeDamage(attackDamage);
         }
     }
 }

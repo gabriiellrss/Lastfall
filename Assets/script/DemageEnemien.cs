@@ -28,7 +28,7 @@ public class DamageEnemy : MonoBehaviour
         {
             if (hit.TryGetComponent(out Enemy enemy))
             {
-                enemy.TakeDemage(attackDamage);
+                enemy.TakeDamage(attackDamage);
             }
         }
     }

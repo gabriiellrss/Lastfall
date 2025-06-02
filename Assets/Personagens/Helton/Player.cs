@@ -599,7 +599,7 @@ public class Player : MonoBehaviour
         foreach (Collider enemy in hitEnemies)
         {
             Debug.Log("Hit: " + enemy.name);
-            enemy.GetComponent<Enemy>()?.TakeDemage(attackDemage);
+            enemy.GetComponent<Enemy>()?.TakeDamage(attackDemage);
         }
     }
 

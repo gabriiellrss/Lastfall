@@ -859,7 +859,7 @@ public class Enemy : MonoBehaviour // Renomeado para indicar adição de logs
         // verificando se isAttacking é false e se o jogador ainda é detectável.
     }
 
-    public void TakeDemage(float amount) // Mantido nome original "TakeDemage"
+    public void TakeDamage(float amount) // CORRIGIDO: Nome da função para TakeDamage
     {
         if (isDead) return;
 
@@ -1040,4 +1040,3 @@ public class Enemy : MonoBehaviour // Renomeado para indicar adição de logs
         }
     }
 }
-
