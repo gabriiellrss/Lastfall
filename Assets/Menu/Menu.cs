@@ -12,7 +12,7 @@ public class Menu : MonoBehaviour
     public GameObject painelConfig;
     public void Iniciar()
     {
-        SceneManager.LoadScene("MapaLab");
+        SceneManager.LoadScene("Intro");
     }
 
     public void config()
