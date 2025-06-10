@@ -407,15 +407,15 @@ public class Player : MonoBehaviour
 
     void Jump()
     {
-        if (!isJumping)
-        {
+        //if (!isJumping)
+        //{
             isJumping = true;
             verticalVelocity = jumpForce;
             canDoubleJump = true;
             noChao = false;
             if (anim != null) anim.SetTrigger("Pular");
             jumpLandSource.PlayOneShot(jumpClip);
-        }
+        //}
     }
 
     void DoubleJump()
@@ -697,11 +697,9 @@ public class Player : MonoBehaviour
     {
         if (context.performed && !isAttacking)
         {
-            if (controller.isGrounded)
-            {
-                Jump();
-            }
-            else if (canDoubleJump)
+
+            Jump();
+            if (canDoubleJump)
             {
                 DoubleJump();
             }
