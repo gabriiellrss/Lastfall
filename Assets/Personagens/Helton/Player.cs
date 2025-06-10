@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
+using UnityEngine.InputSystem; // Adicionado para o novo Input System
 
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(Animator))]
@@ -31,8 +32,11 @@ public class Player : MonoBehaviour
     private Vector3 moveDirection;
     private bool isJumping = false;
     private bool canDoubleJump = false;
-    private float inputX = 0f;
-    private float inputY = 0f;
+    // private float inputX = 0f; // Removido
+    // private float inputY = 0f; // Removido
+
+    private Vector2 moveInput; // Nova variável para o input de movimento
+    private bool isRunningInput; // Nova variável para o input de corrida
 
     public Transform cameraTransform;
 
@@ -177,15 +181,15 @@ public class Player : MonoBehaviour
             return;
         }
 
-        inputX = Input.GetAxis("Horizontal");
-        inputY = Input.GetAxis("Vertical");
+        // inputX = Input.GetAxis("Horizontal"); // Removido
+        // inputY = Input.GetAxis("Vertical"); // Removido
 
         Move();
-        HandleAttack();
+        //HandleAttack();
         HandleCombo();
         UpdateAnimation();
-        pose();
-        HandleWeaponToggle();
+        // pose(); // Será chamado via Input System
+        // HandleWeaponToggle(); // Será chamado via Input System
         HandleLandingSound();
     }
 
@@ -272,46 +276,31 @@ public class Player : MonoBehaviour
         spineTransform.localRotation = Quaternion.Slerp(spineTransform.localRotation, spineTargetRotation, Time.deltaTime * spineRotationSpeed);
     }
 
-    void HandleWeaponToggle()
-    {
-        if (Input.GetKeyDown(KeyCode.G))
-        {
-            isWeaponActive = !isWeaponActive;
-            if (weaponObject != null) weaponObject.SetActive(isWeaponActive);
-            if (anim != null)
-            {
-                anim.SetBool("isShoot", isWeaponActive);
-                if (!isWeaponActive) anim.SetBool("isShooting", false);
-            }
-            PlaySound(isWeaponActive ? equipWeaponClip : unequipWeaponClip);
-        }
-    }
+    // void HandleWeaponToggle() // Removido, será substituído por OnToggleWeapon
+    // {
+    //     if (Input.GetKeyDown(KeyCode.G))
+    //     // ... (código original)
+    // }
 
-    void pose()
-    {
-        if (Input.GetKey(KeyCode.I))
-        {
-            if (anim != null) anim.SetBool("isPose", true);
-        }
-        else
-        {
-            if (anim != null) anim.SetBool("isPose", false);
-        }
-    }
+    // void pose() // Removido, será substituído por OnPose
+    // {
+    //     if (Input.GetKey(KeyCode.I))
+    //     // ... (código original)
+    // }
 
     void Move()
     {
-        float horizontalInput = inputX;
-        float verticalInput = inputY;
+        float horizontalInput = moveInput.x; // Usando moveInput
+        float verticalInput = moveInput.y; // Usando moveInput
         bool isMoving = false;
-        bool isRunning = false;
+        bool isRunning = isRunningInput; // Usando isRunningInput
         float currentSpeed = 0f;
         Vector3 move = Vector3.zero;
 
         if (!isAttacking)
         {
             isMoving = horizontalInput != 0 || verticalInput != 0;
-            isRunning = isMoving && (Input.GetKey(KeyCode.LeftShift) || Input.GetButton("Run"));
+            // isRunning = isMoving && (Input.GetKey(KeyCode.LeftShift) || Input.GetButton("Run")); // Removido
             currentSpeed = isRunning ? runSpeed : walkSpeed;
 
             if (cameraTransform != null)
@@ -335,18 +324,18 @@ public class Player : MonoBehaviour
             if (isJumping) isJumping = false;
             verticalVelocity = -gravity * Time.deltaTime;
             canDoubleJump = true;
-            if (Input.GetButtonDown("Jump") && !isAttacking)
-            {
-                Jump();
-            }
+            // if (Input.GetButtonDown("Jump") && !isAttacking) // Removido, será substituído por OnJump
+            // {
+            //     Jump();
+            // }
         }
         else
         {
             noChao = false;
-            if (Input.GetButtonDown("Jump") && canDoubleJump && !isAttacking)
-            {
-                DoubleJump();
-            }
+            // if (Input.GetButtonDown("Jump") && canDoubleJump && !isAttacking) // Removido, será substituído por OnJump
+            // {
+            //     DoubleJump();
+            // }
             verticalVelocity -= gravity * Time.deltaTime;
         }
 
@@ -401,15 +390,15 @@ public class Player : MonoBehaviour
     void UpdateAnimation()
     {
         if (anim == null) return;
-        anim.SetFloat("inputX", inputX);
-        anim.SetFloat("inputY", inputY);
+        anim.SetFloat("inputX", moveInput.x); // Usando moveInput
+        anim.SetFloat("inputY", moveInput.y); // Usando moveInput
         Vector3 horizontalVelocity = Vector3.zero;
         if (controller != null && controller.enabled) horizontalVelocity = new Vector3(controller.velocity.x, 0, controller.velocity.z);
         float currentHorizontalSpeed = horizontalVelocity.magnitude;
         float animatorSpeed = 0f;
         if (!isAttacking)
         {
-            bool isRunning = Input.GetButton("Run") || Input.GetKey(KeyCode.LeftShift);
+            bool isRunning = isRunningInput; // Usando isRunningInput
             if (currentHorizontalSpeed > 0.1f) animatorSpeed = isRunning ? 2f : 1f;
             anim.SetFloat("velocidade", animatorSpeed);
         }
@@ -439,51 +428,11 @@ public class Player : MonoBehaviour
         PlaySound(jumpClip);
     }
 
-    void HandleAttack()
-    {
-        if (attackTimer > 0) attackTimer -= Time.deltaTime;
-
-        if (Input.GetButtonDown("Fire2"))
-        {
-            if (!isWeaponActive && !isAttacking && attackTimer <= 0)
-            {
-                Attack();
-            }
-            else if (!isWeaponActive)
-            {
-                bufferedAttack1 = true;
-            }
-        }
-
-        if (isWeaponActive && gun != null && anim != null)
-        {
-            if (anim.GetBool("isShoot"))
-            {
-                if (Input.GetButton("Fire1"))
-                {
-                    anim.SetBool("isShooting", true);
-                    anim.SetTrigger("fire");
-                    gun.TryShoot();
-                }
-                else
-                {
-                    anim.SetBool("isShooting", false);
-                }
-            }
-            else
-            {
-                anim.SetBool("isShooting", false);
-            }
-        }
-        else
-        {
-            if (anim != null) anim.SetBool("isShooting", false);
-            if (!isWeaponActive && Input.GetButtonDown("Fire1"))
-            {
-                Fireball();
-            }
-        }
-    }
+    // void HandleAttack() // Removido, será substituído por OnAttack1 e OnAttack2
+    // {
+    //     if (attackTimer > 0) attackTimer -= Time.deltaTime;
+    //     // ... (código original)
+    // }
 
     void Fireball()
     {
@@ -655,7 +604,7 @@ public class Player : MonoBehaviour
 
     private void Die()
     {
-        if(isDead == false)
+        if (isDead == false)
         {
             anim.SetTrigger("Die");
             isDead = true;
@@ -738,5 +687,117 @@ public class Player : MonoBehaviour
         Debug.Log("Jogador renasceu.");
     }
 
+    // --- Métodos para o novo Input System ---
+    public void OnMove(InputAction.CallbackContext context)
+    {
+        moveInput = context.ReadValue<Vector2>();
+    }
+
+    public void OnJump(InputAction.CallbackContext context)
+    {
+        if (context.performed && !isAttacking)
+        {
+            if (controller.isGrounded)
+            {
+                Jump();
+            }
+            else if (canDoubleJump)
+            {
+                DoubleJump();
+            }
+        }
+    }
+
+    public void OnAttack1(InputAction.CallbackContext context)
+    {
+        if (context.performed && !isWeaponActive && !isAttacking && attackTimer <= 0)
+        {
+            Attack();
+        }
+        else if (context.performed && !isWeaponActive)
+        {
+            bufferedAttack1 = true;
+        }
+    }
+
+    public void OnAttack2(InputAction.CallbackContext context)
+    {
+        if (context.performed && !isWeaponActive)
+        {
+            Fireball();
+        }
+    }
+
+    public void OnToggleWeapon(InputAction.CallbackContext context)
+    {
+        if (context.performed)
+        {
+            isWeaponActive = !isWeaponActive;
+            if (weaponObject != null) weaponObject.SetActive(isWeaponActive);
+            if (anim != null)
+            {
+                anim.SetBool("isShoot", isWeaponActive);
+                if (!isWeaponActive) anim.SetBool("isShooting", false);
+            }
+            PlaySound(isWeaponActive ? equipWeaponClip : unequipWeaponClip);
+        }
+    }
+
+    public void OnPose(InputAction.CallbackContext context)
+    {
+        if (anim != null)
+        {
+            if (context.performed)
+            {
+                anim.SetBool("isPose", true);
+            }
+            else if (context.canceled)
+            {
+                anim.SetBool("isPose", false);
+            }
+        }
+    }
+
+    public void OnRun(InputAction.CallbackContext context)
+    {
+        if (context.performed)
+        {
+            isRunningInput = true;
+        }
+        else if (context.canceled)
+        {
+            isRunningInput = false;
+        }
+    }
+
+    public void OnShoot(InputAction.CallbackContext context)
+    {
+        if (isWeaponActive && gun != null && anim != null)
+        {
+            if (anim.GetBool("isShoot"))
+            {
+                if (context.performed)
+                {
+                    anim.SetBool("isShooting", true);
+                    anim.SetTrigger("fire");
+                    gun.TryShoot();
+                }
+                else if (context.canceled)
+                {
+                    anim.SetBool("isShooting", false);
+                }
+            }
+            else
+            {
+                anim.SetBool("isShooting", false);
+            }
+        }
+        else
+        {
+            if (anim != null) anim.SetBool("isShooting", false);
+        }
+    }
+
 }
+
 
