@@ -4,6 +4,13 @@ ShaderImporter:
   externalObjects: {}
   defaultTextures: []
   nonModifiableTextures: []
-  userData: Version 2.0
+  userData: 
   assetBundleName: 
   assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 167553
+  packageName: HyperCasual - Puzzle Game Engine Lite
+  packageVersion: 1.0
+  assetPath: Assets/Shooter Pack/TextMesh Pro/Shaders/TMPro.cginc
+  uploadId: 710376

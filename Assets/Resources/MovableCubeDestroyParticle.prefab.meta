@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ad233be7de23815469d4d7e5b4d5ed47
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 167553
+  packageName: HyperCasual - Puzzle Game Engine Lite
+  packageVersion: 1.0
+  assetPath: Assets/Resources/MovableCubeDestroyParticle.prefab
+  uploadId: 710376
