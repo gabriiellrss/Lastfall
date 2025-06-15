@@ -45,6 +45,9 @@ public class Gun : MonoBehaviour
     //bug fixing :D
     public bool allowInvoke = true;
 
+    public bool CanShoot => readyToShoot && !reloading && bulletsLeft > 0;
+
+
     private void Awake()
     {
         //make sure magazine is full

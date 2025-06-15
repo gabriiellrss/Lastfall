@@ -29,7 +29,7 @@
                     "id": "82311977-f7e9-4328-bac5-6b7a444fea3c",
                     "expectedControlType": "",
                     "processors": "",
-                    "interactions": "Press(behavior=1)",
+                    "interactions": "Press",
                     "initialStateCheck": false
                 },
                 {
@@ -301,7 +301,7 @@
                     "name": "",
                     "id": "1c084bd5-43e1-4c1d-a678-21148bf4582e",
                     "path": "<Mouse>/leftButton",
-                    "interactions": "Press(behavior=1)",
+                    "interactions": "",
                     "processors": "",
                     "groups": "",
                     "action": "shoot",
@@ -312,7 +312,7 @@
                     "name": "",
                     "id": "e41039fc-614a-45ba-a402-84a2bb7b5a2a",
                     "path": "<Gamepad>/leftTrigger",
-                    "interactions": "Press(behavior=1)",
+                    "interactions": "",
                     "processors": "",
                     "groups": "",
                     "action": "shoot",
