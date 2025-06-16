@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using TMPro;
-using static Unity.Burst.Intrinsics.X86.Avx;
 
 public class npc : MonoBehaviour
 {
@@ -10,17 +9,28 @@ public class npc : MonoBehaviour
     public GameObject pressKeyUIPrefab;
     public GameObject interactionCanvasPrefab;
     public Transform uiParent;
+    public GameObject uiToActivateAtEnd; // GameObject que será ligado no final
 
     [Header("Dialog")]
     [TextArea(3, 5)]
-    public string[] dialogLines; // Linhas do diálogo
+    public string[] dialogLines;
+    public AudioClip[] voiceClips; // Clipes de voz para cada fala
 
     [Header("Keys")]
     public KeyCode interactionKey = KeyCode.E;
-    public KeyCode closeKey = KeyCode.Escape;
 
     [Header("NPC Animator")]
     private Animator npcAnimator;
+
+    [Header("Objetos a excluir")]
+    public GameObject objectToDestroy1;
+    public GameObject objectToDestroy2;
+
+    [Header("Cabeça usando IK")]
+    public bool useIKHeadLook = true;
+    public Transform lookAtTarget; // Normalmente o jogador
+    public float lookWeight = 1f;
+
 
     private GameObject currentPressKeyUI;
     private GameObject currentInteractionCanvas;
@@ -30,38 +40,32 @@ public class npc : MonoBehaviour
     private bool isCanvasOpen = false;
     private bool isTyping = false;
     private int currentLineIndex = 0;
+    private bool naoPodeMais = true;
 
     private Coroutine typingCoroutine;
-
+    private AudioSource audioSource;
 
     private void Start()
     {
         npcAnimator = GetComponent<Animator>();
+        audioSource = gameObject.AddComponent<AudioSource>();
+
     }
 
     void Update()
     {
-        if (isPlayerInZone && Input.GetKeyDown(interactionKey))
+        if (isPlayerInZone && Input.GetKeyDown(interactionKey) && naoPodeMais)
         {
             if (!isCanvasOpen)
             {
                 OpenDialog();
             }
-            else if (!isTyping)
+            else if (!isTyping && !audioSource.isPlaying)
             {
                 NextLine();
             }
-            else
-            {
-                CompleteCurrentLine();
-            }
+            // Jogador só pode pular texto se digitação já terminou e o áudio já acabou
         }
-
-        if (isCanvasOpen && Input.GetKeyDown(closeKey))
-        {
-            CloseDialog();
-        }
-
 
     }
 
@@ -82,7 +86,6 @@ public class npc : MonoBehaviour
             isPlayerInZone = true;
         }
     }
-
 
     private void OnTriggerExit(Collider other)
     {
@@ -106,8 +109,13 @@ public class npc : MonoBehaviour
         currentLineIndex = 0;
         isCanvasOpen = true;
 
-        npcAnimator?.SetBool("isTalking", true); // Ativa animação de fala
+        if (objectToDestroy1 != null) Destroy(objectToDestroy1);
+        if (objectToDestroy2 != null) Destroy(objectToDestroy2);
 
+        npcAnimator?.SetBool("isTalking", true);
+
+        if (uiToActivateAtEnd != null)
+            uiToActivateAtEnd.SetActive(false); // Desliga a UI no início
 
         ShowLine();
     }
@@ -117,10 +125,20 @@ public class npc : MonoBehaviour
         if (currentInteractionCanvas != null)
             Destroy(currentInteractionCanvas);
 
-        npcAnimator?.SetBool("isTalking", false); // Desativa animação de fala
+        if (currentPressKeyUI != null)
+            Destroy(currentPressKeyUI);
+
+        npcAnimator?.SetBool("isTalking", false);
 
         isCanvasOpen = false;
         isTyping = false;
+        naoPodeMais = false;
+
+
+
+        // Ativar UI final
+        if (uiToActivateAtEnd != null)
+            uiToActivateAtEnd.SetActive(true);
     }
 
     void ShowLine()
@@ -132,6 +150,13 @@ public class npc : MonoBehaviour
 
             typingCoroutine = StartCoroutine(TypeLine(dialogLines[currentLineIndex]));
 
+            // Tocar áudio correspondente
+            if (voiceClips != null && currentLineIndex < voiceClips.Length && voiceClips[currentLineIndex] != null)
+            {
+                audioSource.clip = voiceClips[currentLineIndex];
+                audioSource.Play();
+            }
+
             if (currentPressKeyUI != null)
             {
                 TextMeshProUGUI tmp = currentPressKeyUI.GetComponentInChildren<TextMeshProUGUI>();
@@ -142,7 +167,6 @@ public class npc : MonoBehaviour
             }
         }
     }
-
 
     void NextLine()
     {
@@ -175,9 +199,20 @@ public class npc : MonoBehaviour
         foreach (char letter in line.ToCharArray())
         {
             dialogText.text += letter;
-            yield return new WaitForSeconds(0.03f); // Velocidade da digitação
+            yield return new WaitForSeconds(0.03f);
         }
 
         isTyping = false;
     }
+
+    // ?? Cabeça olha para o jogador durante diálogo
+    private void OnAnimatorIK(int layerIndex)
+    {
+        if (npcAnimator == null || !useIKHeadLook || !isCanvasOpen || lookAtTarget == null)
+            return;
+
+        npcAnimator.SetLookAtWeight(lookWeight);
+        npcAnimator.SetLookAtPosition(lookAtTarget.position);
+    }
+
 }

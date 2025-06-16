@@ -15,6 +15,8 @@ public class EndCutsceneTrigger : MonoBehaviour
     [Header("Timeline (Cutscene)")]
     public PlayableDirector cutsceneDirector;
 
+    public GameObject uiGameObject;
+
     private CharacterController characterController;
     private Animator animator;
     private MonoBehaviour playerScript;
@@ -22,6 +24,8 @@ public class EndCutsceneTrigger : MonoBehaviour
 
     void Start()
     {
+        uiGameObject.SetActive(false);
+
         if (cutsceneDirector != null)
         {
             cutsceneDirector.stopped += OnCutsceneEnded;
@@ -55,6 +59,9 @@ public class EndCutsceneTrigger : MonoBehaviour
                 audio.enabled = true;
             }
         }
+
+        uiGameObject.SetActive(true);
+        
 
         // Controlar Animator
         if (animator != null)
