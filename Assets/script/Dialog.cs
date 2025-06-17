@@ -287,10 +287,10 @@ public class Dialog : MonoBehaviour
         {
             playerScript.StopPlayer(!isActive);
         }
-        if (cameraScript != null)
+        /*if (cameraScript != null)
         {
             cameraScript.enabled = isActive;
-        }
+        }*/
     }
 
     private void SetCursorState(bool visible)
