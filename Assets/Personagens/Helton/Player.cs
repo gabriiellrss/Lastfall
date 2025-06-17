@@ -120,6 +120,8 @@ public class Player : MonoBehaviour
 
     private bool isShootingHeld = false;
     public bool chave1 = false;
+    public bool chave2 = false;
+
 
 
     void Start()

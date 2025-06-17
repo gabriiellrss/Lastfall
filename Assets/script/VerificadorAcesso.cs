@@ -7,9 +7,11 @@ public class VerificadorAcesso : MonoBehaviour
 {
     public Player player; // Referência ao player
     public TextMeshProUGUI mensagemTexto; // Mensagem na tela
+    public ObjectiveUIController mensaTexto;
     public MonoBehaviour componenteParaAtivar; // Ex: porta
     public GameObject pressKeyUIPrefab; // Prefab com "Pressione E"
     public Transform uiParent; // Onde instanciar o prompt
+    public GameObject iconChave;
 
     public KeyCode interactionKey = KeyCode.E;
 
@@ -47,12 +49,13 @@ public class VerificadorAcesso : MonoBehaviour
     private IEnumerator ProcessarAcesso()
     {
         processando = true;
-        mensagemTexto.text = "Processando...";
+        mensaTexto.ShowInstruction("Processando...", 0f);
         yield return new WaitForSeconds(3f);
 
         if (player.chave1)
         {
-            mensagemTexto.text = "Concluído: Porta liberada.";
+            mensaTexto.ShowInstruction("Concluído: Porta liberada. Vá até a sala de controle", 3f);
+
             acessoConcluido = true;
             if (componenteParaAtivar != null)
             {
@@ -62,7 +65,8 @@ public class VerificadorAcesso : MonoBehaviour
         }
         else
         {
-            mensagemTexto.text = "Sem chave de acesso.";
+            mensaTexto.ShowInstruction("Sem chave de acesso. Procure uma chave branca no Lab", 3f);
+            iconChave.SetActive(false);
             if (isPlayerInZone)
             {
                 ShowPrompt("Pressione " + interactionKey.ToString());
