@@ -11,7 +11,7 @@ public class Dialog : MonoBehaviour
     public GameObject loginCanvas;
 
     [Header("Login Settings")]
-    public string senhaCorreta = "1234";
+    public string senhaCorreta = "CO2";
     public TMP_InputField inputSenha;
     public TextMeshProUGUI feedbackTexto;
     public float welcomeMessageDuration = 3.0f;
@@ -37,11 +37,11 @@ public class Dialog : MonoBehaviour
         if (loginCanvas != null) loginCanvas.SetActive(false);
         if (currentPressKeyUIInstance != null) Destroy(currentPressKeyUIInstance);
 
-        if (inputSenha != null)
+        /*if (inputSenha != null)
         {
             inputSenha.contentType = TMP_InputField.ContentType.IntegerNumber;
             inputSenha.onValueChanged.AddListener(ValidateNumericInput);
-        }
+        }*/
     }
 
     private void ValidateNumericInput(string input)
@@ -219,7 +219,9 @@ public class Dialog : MonoBehaviour
 
     public void VerificarSenha()
     {
-        if (inputSenha == null || currentState == UIState.ShowingWelcome) return;
+        inputSenha.text = inputSenha.text.ToUpper();
+
+        /*if (inputSenha == null || currentState == UIState.ShowingWelcome) return;*/
 
         if (inputSenha.text == senhaCorreta)
         {
@@ -246,7 +248,7 @@ public class Dialog : MonoBehaviour
         if (feedbackTexto != null)
         {
             feedbackTexto.gameObject.SetActive(true);
-            string welcomeMessage = "bem-vindo cientista Cleber";
+            string welcomeMessage = "bem-vindo ao sistema de segunrança da Umbrella";
             yield return StartCoroutine(TypeText(feedbackTexto, welcomeMessage, typewriterSpeed));
             yield return new WaitForSeconds(welcomeMessageDuration);
             feedbackTexto.text = "";
@@ -301,10 +303,10 @@ public class Dialog : MonoBehaviour
 
     void OnDestroy()
     {
-        if (inputSenha != null)
+        /*if (inputSenha != null)
         {
             inputSenha.onValueChanged.RemoveListener(ValidateNumericInput);
-        }
+        }*/
         if (activeCoroutine != null) StopCoroutine(activeCoroutine);
     }
 }
