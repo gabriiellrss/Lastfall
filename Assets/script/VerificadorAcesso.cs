@@ -65,7 +65,7 @@ public class VerificadorAcesso : MonoBehaviour
         }
         else
         {
-            mensaTexto.ShowInstruction("Sem chave de acesso. Procure uma chave branca no Lab", 3f);
+            mensaTexto.ShowInstruction("Sem a chave de acesso. Procure uma chave branca nesse local", 3f);
             iconChave.SetActive(false);
             if (isPlayerInZone)
             {
@@ -81,9 +81,10 @@ public class VerificadorAcesso : MonoBehaviour
         HidePrompt(); // Garante que não duplique
         if (pressKeyUIPrefab != null)
         {
-            currentPrompt = Instantiate(pressKeyUIPrefab, uiParent != null ? uiParent : transform);
-            TextMeshProUGUI tmp = currentPrompt.GetComponentInChildren<TextMeshProUGUI>();
-            if (tmp != null) tmp.text = text;
+            Instantiate(pressKeyUIPrefab, uiParent != null ? uiParent : transform);
+            //currentPrompt = Instantiate(pressKeyUIPrefab, uiParent != null ? uiParent : transform);
+            //TextMeshProUGUI tmp = currentPrompt.GetComponentInChildren<TextMeshProUGUI>();
+            //if (tmp != null) tmp.text = text;
         }
     }
 

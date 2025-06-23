@@ -121,6 +121,7 @@ public class Player : MonoBehaviour
     private bool isShootingHeld = false;
     public bool chave1 = false;
     public bool chave2 = false;
+    public GameObject panelMissao;
 
 
 
@@ -178,47 +179,56 @@ public class Player : MonoBehaviour
 
         if (isStopped)
         {
-            // Se o jogador estiver parado, garantimos que a animação de movimento seja zero
             if (anim != null)
             {
                 anim.SetFloat("inputX", 0f);
                 anim.SetFloat("inputY", 0f);
                 anim.SetFloat("velocidade", 0f);
             }
-            // Não retornamos aqui para permitir que LateUpdate e outras lógicas de estado (como isShootingHeld) ainda funcionem,
-            // mas o movimento e ataques são bloqueados nos métodos específicos.
+            return;
         }
 
-        Move();
+        if (Input.GetKey(KeyCode.K)) // Removido, será substituído por OnJump
+        {
+            panelMissao.SetActive(true);
+        } else
+        {
+            panelMissao.SetActive(false);
+        }
+
+            // inputX = Input.GetAxis("Horizontal"); // Removido
+            // inputY = Input.GetAxis("Vertical"); // Removido
+
+            Move();
+        //HandleAttack();
         HandleCombo();
         UpdateAnimation();
+        // pose(); // Será chamado via Input System
+        // HandleWeaponToggle(); // Será chamado via Input System
         HandleLandingSound();
 
-        // Lógica de tiro contínuo (se a arma permitir e o botão estiver pressionado)
-        if (!isStopped && isWeaponActive && gun != null && anim != null) // Adicionado isStopped aqui
+        if (!isWeaponActive || gun == null || anim == null)
+            return;
+
+        if (gun.allowButtonHold && isShootingHeld)
         {
-            if (gun.allowButtonHold && isShootingHeld)
+            if (gun.CanShoot)
             {
-                if (gun.CanShoot)
-                {
-                    gun.TryShoot();
-                    anim.SetBool("isShooting", true);
-                    anim.SetTrigger("fire");
-                }
-                else
-                {
-                    anim.SetBool("isShooting", false);
-                }
+                gun.TryShoot();
+                anim.SetBool("isShooting", true);
+                anim.SetTrigger("fire");
+            }
+            else
+            {
+                anim.SetBool("isShooting", false);
             }
         }
     }
 
     void LateUpdate()
     {
-        // A rotação da espinha ainda pode ser desejada mesmo quando parado para efeitos visuais,
-        // mas se quiser bloquear completamente, adicione 'if (isStopped) return;' aqui também.
-        // Por enquanto, vamos permitir a rotação da espinha para a câmera, mesmo quando parado,
-        // pois isso não afeta o movimento ou ataque.
+        if (isStopped) return;
+
         if (isAttacking || isWeaponActive)
         {
             RotateSpineTowardsCamera();
@@ -243,10 +253,9 @@ public class Player : MonoBehaviour
         {
             moveDirection = Vector3.zero;
             verticalVelocity = 0f;
-            // Desativa o CharacterController para impedir qualquer movimento físico
-            if (controller != null)
+            if (controller != null && controller.enabled)
             {
-                controller.enabled = false;
+                controller.Move(Vector3.zero);
             }
             if (anim != null)
             {
@@ -264,20 +273,8 @@ public class Player : MonoBehaviour
                 anim.ResetTrigger("Fireball");
                 anim.SetBool("isAttacking", false);
                 anim.SetBool("isShooting", false);
-                anim.SetBool("isPose", false); // Garante que a pose também seja resetada
             }
             isAttacking = false;
-            isShootingHeld = false; // Garante que o tiro contínuo pare
-            moveInput = Vector2.zero; // Zera o input de movimento
-            isRunningInput = false; // Zera o input de corrida
-        }
-        else
-        {
-            // Reativa o CharacterController quando o jogador não está mais parado
-            if (controller != null)
-            {
-                controller.enabled = true;
-            }
         }
     }
 
@@ -311,6 +308,18 @@ public class Player : MonoBehaviour
         spineTransform.localRotation = Quaternion.Slerp(spineTransform.localRotation, spineTargetRotation, Time.deltaTime * spineRotationSpeed);
     }
 
+    // void HandleWeaponToggle() // Removido, será substituído por OnToggleWeapon
+    // {
+    //     if (Input.GetKeyDown(KeyCode.G))
+    //     // ... (código original)
+    // }
+
+    // void pose() // Removido, será substituído por OnPose
+    // {
+    //     if (Input.GetKey(KeyCode.I))
+    //     // ... (código original)
+    // }
+
     void Move()
     {
         float horizontalInput = moveInput.x; // Usando moveInput
@@ -320,9 +329,10 @@ public class Player : MonoBehaviour
         float currentSpeed = 0f;
         Vector3 move = Vector3.zero;
 
-        if (!isAttacking && !isStopped) // Adicionado isStopped aqui
+        if (!isAttacking)
         {
             isMoving = horizontalInput != 0 || verticalInput != 0;
+            // isRunning = isMoving && (Input.GetKey(KeyCode.LeftShift) || Input.GetButton("Run")); // Removido
             currentSpeed = isRunning ? runSpeed : walkSpeed;
 
             if (cameraTransform != null)
@@ -346,21 +356,28 @@ public class Player : MonoBehaviour
             if (isJumping) isJumping = false;
             verticalVelocity = -gravity * Time.deltaTime;
             canDoubleJump = true;
-            // O input de pulo agora é tratado no OnJump, que já tem a verificação isStopped
+            if (Input.GetButtonDown("Jump") && !isAttacking) // Removido, será substituído por OnJump
+            {
+                Jump();
+            }
         }
         else
         {
             noChao = false;
+            if (Input.GetButtonDown("Jump") && canDoubleJump && !isAttacking) // Removido, será substituído por OnJump
+            {
+                DoubleJump();
+            }
             verticalVelocity -= gravity * Time.deltaTime;
         }
 
         moveDirection = new Vector3(move.x, verticalVelocity, move.z);
-        if (controller != null && controller.enabled) // controller.enabled já é verificado
+        if (controller != null && controller.enabled)
         {
             controller.Move(moveDirection * Time.deltaTime);
         }
 
-        if (isMoving && !isAttacking && !isStopped) // Adicionado isStopped aqui
+        if (isMoving && !isAttacking)
         {
             Vector3 lookDirection = new Vector3(move.x, 0, move.z);
             if (lookDirection.magnitude > 0.1f)
@@ -370,8 +387,7 @@ public class Player : MonoBehaviour
             }
         }
 
-        // Lógica de áudio de movimento
-        if (isMoving && controller.isGrounded && !isStopped) // Adicionado isStopped aqui
+        if (isMoving && controller.isGrounded)
         {
             if (!audioSource.isPlaying || (audioSource.clip != walkClip && audioSource.clip != runClip))
             {
@@ -406,26 +422,17 @@ public class Player : MonoBehaviour
     void UpdateAnimation()
     {
         if (anim == null) return;
-        if (isStopped) // Se estiver parado, força as animações de movimento para zero
+        anim.SetFloat("inputX", moveInput.x); // Usando moveInput
+        anim.SetFloat("inputY", moveInput.y); // Usando moveInput
+        Vector3 horizontalVelocity = Vector3.zero;
+        if (controller != null && controller.enabled) horizontalVelocity = new Vector3(controller.velocity.x, 0, controller.velocity.z);
+        float currentHorizontalSpeed = horizontalVelocity.magnitude;
+        float animatorSpeed = 0f;
+        if (!isAttacking)
         {
-            anim.SetFloat("inputX", 0f);
-            anim.SetFloat("inputY", 0f);
-            anim.SetFloat("velocidade", 0f);
-        }
-        else
-        {
-            anim.SetFloat("inputX", moveInput.x); // Usando moveInput
-            anim.SetFloat("inputY", moveInput.y); // Usando moveInput
-            Vector3 horizontalVelocity = Vector3.zero;
-            if (controller != null && controller.enabled) horizontalVelocity = new Vector3(controller.velocity.x, 0, controller.velocity.z);
-            float currentHorizontalSpeed = horizontalVelocity.magnitude;
-            float animatorSpeed = 0f;
-            if (!isAttacking)
-            {
-                bool isRunning = isRunningInput; // Usando isRunningInput
-                if (currentHorizontalSpeed > 0.1f) animatorSpeed = isRunning ? 2f : 1f;
-                anim.SetFloat("velocidade", animatorSpeed);
-            }
+            bool isRunning = isRunningInput; // Usando isRunningInput
+            if (currentHorizontalSpeed > 0.1f) animatorSpeed = isRunning ? 2f : 1f;
+            anim.SetFloat("velocidade", animatorSpeed);
         }
         anim.SetBool("noChao", noChao);
     }
@@ -452,6 +459,12 @@ public class Player : MonoBehaviour
         if (anim != null) anim.SetTrigger("DoubleJump");
         PlaySound(jumpClip);
     }
+
+    // void HandleAttack() // Removido, será substituído por OnAttack1 e OnAttack2
+    // {
+    //     if (attackTimer > 0) attackTimer -= Time.deltaTime;
+    //     // ... (código original)
+    // }
 
     void Fireball()
     {
@@ -492,33 +505,33 @@ public class Player : MonoBehaviour
         if (anim != null) anim.SetBool("isAttacking", true);
         attackTimer = attackCooldown;
         int attackAnimIDToPlay = attack1AnimID;
-        //float dashDistance = 0f; // Não usado diretamente aqui
-        //float dashDuration = 0f; // Não usado diretamente aqui
+        float dashDistance = 0f;
+        float dashDuration = 0f;
         AudioClip attackSound = null;
 
         switch (currentCombo1)
         {
             case 0:
-                attackAnimIDToPlay = attack1AnimID; //dashDistance = attack1DashDistance;
+                attackAnimIDToPlay = attack1AnimID; dashDistance = attack1DashDistance;
                 if (anim != null) anim.SetTrigger("Attack1"); Demage(); attackSound = attack1Clip;
                 SetTrailRenderer(rightToe, false, Color.white, Color.white, 0.1f, 0f);
                 SetTrailRenderer(rightHand, true, Color.red, Color.yellow, 0.2f, 0f);
                 SetTrailRenderer(leftHand, false, Color.white, Color.white, 0.1f, 0f);
                 break;
             case 1:
-                attackAnimIDToPlay = attack2AnimID; //dashDistance = attack2DashDistance; dashDuration = attack2DashDuration;
+                attackAnimIDToPlay = attack2AnimID; dashDistance = attack2DashDistance; dashDuration = attack2DashDuration;
                 if (anim != null) anim.SetTrigger("Attack2"); Demage(); attackSound = attack2Clip;
                 SetTrailRenderer(leftHand, true, Color.blue, Color.cyan, 0.2f, 0f);
                 SetTrailRenderer(rightHand, false, Color.white, Color.white, 0.1f, 0f);
                 break;
             case 2:
-                attackAnimIDToPlay = attack3AnimID; //dashDistance = attack3DashDistance; dashDuration = attack3DashDuration;
+                attackAnimIDToPlay = attack3AnimID; dashDistance = attack3DashDistance; dashDuration = attack3DashDuration;
                 if (anim != null) anim.SetTrigger("Attack3"); Demage(); attackSound = attack3Clip;
                 SetTrailRenderer(leftHand, false, Color.white, Color.white, 0.1f, 0f);
                 SetTrailRenderer(rightToe, true, Color.green, Color.cyan, 0.2f, 0f);
                 break;
             case 3:
-                attackAnimIDToPlay = attack4AnimID; //dashDistance = attack3DashDistance; dashDuration = attack3DashDuration;
+                attackAnimIDToPlay = attack4AnimID; dashDistance = attack3DashDistance; dashDuration = attack3DashDuration;
                 if (anim != null) anim.SetTrigger("Attack4"); Demage(); attackSound = attack4Clip;
                 SetTrailRenderer(leftHand, true, Color.magenta, Color.cyan, 0.2f, 0f);
                 SetTrailRenderer(rightToe, true, Color.green, Color.cyan, 0.2f, 0f);
@@ -535,21 +548,21 @@ public class Player : MonoBehaviour
         if (anim != null) anim.SetBool("isAttacking", true);
         attackTimer = attackCooldown;
         int attackAnimIDToPlay = attack5AnimID;
-        //float dashDistance = 0f; // Não usado diretamente aqui
-        //float dashDuration = 0f; // Não usado diretamente aqui
+        float dashDistance = 0f;
+        float dashDuration = 0f;
         AudioClip attackSound = null;
 
         switch (currentCombo2)
         {
             case 0:
-                attackAnimIDToPlay = attack5AnimID; //dashDistance = attack1DashDistance;
+                attackAnimIDToPlay = attack5AnimID; dashDistance = attack1DashDistance;
                 if (anim != null) anim.SetTrigger("c2Attack1"); Demage(); attackSound = attack5Clip;
                 SetTrailRenderer(rightToe, false, Color.white, Color.white, 0.1f, 0f);
                 SetTrailRenderer(rightHand, true, Color.red, Color.yellow, 0.2f, 0f);
                 SetTrailRenderer(leftHand, true, Color.blue, Color.cyan, 0.2f, 0f);
                 break;
             case 1:
-                attackAnimIDToPlay = attack6AnimID; //dashDistance = attack2DashDistance; dashDuration = attack2DashDuration;
+                attackAnimIDToPlay = attack6AnimID; dashDistance = attack2DashDistance; dashDuration = attack2DashDuration;
                 if (anim != null) anim.SetTrigger("c2Attack2"); Demage(); attackSound = attack6Clip;
                 SetTrailRenderer(leftHand, true, Color.blue, Color.cyan, 0.2f, 0f);
                 SetTrailRenderer(rightHand, false, Color.white, Color.white, 0.1f, 0f);
@@ -575,8 +588,7 @@ public class Player : MonoBehaviour
     {
         if (comboTimer1 > 0) comboTimer1 -= Time.deltaTime; else currentCombo1 = 0;
         if (comboTimer2 > 0) comboTimer2 -= Time.deltaTime; else currentCombo2 = 0;
-        // O bufferedAttack1 só deve ser processado se o jogador não estiver parado
-        if (bufferedAttack1 && !isAttacking && attackTimer <= 0 && !isWeaponActive && !isStopped)
+        if (bufferedAttack1 && !isAttacking && attackTimer <= 0 && !isWeaponActive)
         {
             Attack();
             bufferedAttack1 = false;
@@ -597,10 +609,6 @@ public class Player : MonoBehaviour
 
     float GetAnimationDuration(int attackID)
     {
-        // Esta função deve retornar a duração real da animação correspondente ao attackID
-        // Para simplificar, mantive um valor fixo, mas em um jogo real, você buscaria isso do Animator.
-        // Exemplo: anim.runtimeAnimatorController.animationClips[attackID].length;
-        // Ou usar um AnimationEvent no final da animação para chamar ResetAttackState.
         return 0.5f;
     }
 
@@ -634,8 +642,10 @@ public class Player : MonoBehaviour
             isDead = true;
         }
         PlaySound(deathClip);
-        StopPlayer(true); // Para o jogador completamente ao morrer
+        StopPlayer(true);
+        controller.enabled = false;
         StartCoroutine(RespawnCoroutine());
+
     }
 
     private void PlaySound(AudioClip clip, bool loop = false)
@@ -667,7 +677,7 @@ public class Player : MonoBehaviour
         currentHealth = maxHealth;
         editBarHealth(currentHealth, maxHealth);
 
-        // Reseta a posição
+        // Reseta a posição (IMPORTANTE: controller deve estar desativado)
         transform.position = initialPosition;
 
         // Reseta velocidade e estado de pulo
@@ -685,37 +695,38 @@ public class Player : MonoBehaviour
         comboTimer1 = 0f;
         comboTimer2 = 0f;
 
+        // Reativa o controle
+        if (controller != null) controller.enabled = true;
+
+        // Opcional: Reativar componentes visuais
+        // foreach (Renderer rend in GetComponentsInChildren<Renderer>())
+        // { rend.enabled = true; }
+
         // Reseta o estado da animação
         if (anim != null)
         {
             anim.ResetTrigger("Die");
             anim.ResetTrigger("Damage");
+            // Pode ser necessário forçar um estado Idle ou similar
             anim.Play("Idle"); // Substitua "Idle" pelo nome do seu estado de animação padrão
             anim.SetBool("isAttacking", false);
             anim.SetBool("isShooting", false);
-            anim.SetBool("isPose", false);
+            // Garanta que outros bools/triggers estejam no estado correto
         }
 
         // Marca como vivo novamente
         isDead = false;
-        StopPlayer(false); // Reativa o jogador e o CharacterController
         Debug.Log("Jogador renasceu.");
     }
 
     // --- Métodos para o novo Input System ---
     public void OnMove(InputAction.CallbackContext context)
     {
-        if (isStopped)
-        {
-            moveInput = Vector2.zero; // Garante que o input de movimento seja zero quando parado
-            return; // Impede movimento quando parado
-        }
         moveInput = context.ReadValue<Vector2>();
     }
 
-    public void OnJump(InputAction.CallbackContext context)
+    /*public void OnJump(InputAction.CallbackContext context)
     {
-        if (isStopped) return; // Impede pulo quando parado
         if (context.performed && !isAttacking)
         {
             if (controller.isGrounded)
@@ -727,11 +738,10 @@ public class Player : MonoBehaviour
                 DoubleJump();
             }
         }
-    }
+    }*/
 
     public void OnAttack1(InputAction.CallbackContext context)
     {
-        if (isStopped) return; // Impede ataque quando parado
         if (context.performed && !isWeaponActive && !isAttacking && attackTimer <= 0)
         {
             Attack();
@@ -744,7 +754,6 @@ public class Player : MonoBehaviour
 
     public void OnAttack2(InputAction.CallbackContext context)
     {
-        if (isStopped) return; // Impede ataque quando parado
         if (context.performed && !isWeaponActive)
         {
             Fireball();
@@ -753,7 +762,6 @@ public class Player : MonoBehaviour
 
     public void OnToggleWeapon(InputAction.CallbackContext context)
     {
-        if (isStopped) return; // Impede alternar arma quando parado
         if (context.performed)
         {
             isWeaponActive = !isWeaponActive;
@@ -769,7 +777,6 @@ public class Player : MonoBehaviour
 
     public void OnPose(InputAction.CallbackContext context)
     {
-        if (isStopped) return; // Impede pose quando parado
         if (anim != null)
         {
             if (context.performed)
@@ -785,11 +792,6 @@ public class Player : MonoBehaviour
 
     public void OnRun(InputAction.CallbackContext context)
     {
-        if (isStopped)
-        {
-            isRunningInput = false; // Garante que o input de corrida seja falso quando parado
-            return; // Impede corrida quando parado
-        }
         if (context.performed)
         {
             isRunningInput = true;
@@ -800,14 +802,9 @@ public class Player : MonoBehaviour
         }
     }
 
+
     public void OnShoot(InputAction.CallbackContext context)
     {
-        if (isStopped)
-        {
-            isShootingHeld = false; // Garante que o tiro seja interrompido quando parado
-            return; // Impede tiro quando parado
-        }
-
         if (!isWeaponActive || gun == null || anim == null)
             return;
 
@@ -829,4 +826,9 @@ public class Player : MonoBehaviour
             anim.SetBool("isShooting", false);
         }
     }
+
+
+
+
 }
+

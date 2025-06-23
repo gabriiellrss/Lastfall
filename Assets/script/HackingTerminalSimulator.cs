@@ -37,7 +37,7 @@ public class HackingTerminalSimulator : MonoBehaviour
     [Space(10)]
     public string[] answerOptions = {
         "Melhoram o desempenho",
-        "Consomem energia à toa e emitem CO₂",
+        "Consomem energia à toa e emitem CO2",
         "Evitam falhas técnicas",
         "Reduzem a poluição"
     };
@@ -60,16 +60,16 @@ public class HackingTerminalSimulator : MonoBehaviour
 
     private List<string> hackingCommands = new List<string>
     {
-        "nmap -sS 192.168.1.0/24",
+        "PROTOCOLO DE SUSTENTABILIDADE ATIVADO COM SUCESSO!\n",
         "Scanning network... Found 15 active hosts",
         "sqlmap -u \"http://target.com/login.php\" --dbs",
-        "Database injection successful... Extracting data",
+        "Análise do Sistema... Extracting data",
         "hydra -l admin -P passwords.txt ssh://target.com",
-        "Brute force attack initiated... Password found: admin123",
-        "msfconsole",
+        "Estabilização em andamento.... Password found: admin123",
+        "Emissões controladas.",
         "use exploit/windows/smb/ms17_010_eternalblue",
-        "set RHOSTS 192.168.1.100",
-        "exploit",
+        "Processos de degradação atenuados.\n",
+        "Fluxo de contaminação diminuindo",
         "Payload executed successfully... Shell access granted",
         "whoami",
         "nt authority\\system",
@@ -481,8 +481,8 @@ public class HackingTerminalSimulator : MonoBehaviour
 
             // Adicionar ao terminal
             yield return StartCoroutine(TypeText("\n[RESPOSTA CORRETA] - Verificação aprovada!\n", false));
-            yield return StartCoroutine(TypeText("Sistema desbloqueado... Bem-vindo ao futuro sustentável!\n", false));
-            yield return StartCoroutine(TypeText("INFO: Servidores desnecessários consomem energia e geram CO₂.\n", false));
+            yield return StartCoroutine(TypeText("SUA AÇÃO EVITOU UM COLAPSO AMBIENTAL IMEDIATO.\n", false));
+            yield return StartCoroutine(TypeText("O sistema agora opera sob parâmetros de emergência, mas a ameaça direta foi contida.\n", false));
             yield return StartCoroutine(TypeText("\nMISSÃO CONCLUÍDA COM SUCESSO!\n", false));
 
             controlaLuzes.reduzirImpacto = true;
