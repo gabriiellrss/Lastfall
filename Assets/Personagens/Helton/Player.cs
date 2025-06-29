@@ -188,7 +188,7 @@ public class Player : MonoBehaviour
             return;
         }
 
-        if (Input.GetKey(KeyCode.K)) // Removido, será substituído por OnJump
+        if (Input.GetKeyDown(KeyCode.K)) // Removido, será substituído por OnJump
         {
             panelMissao.SetActive(true);
         } else
